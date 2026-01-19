@@ -1,0 +1,55 @@
+{
+  "name": "Infinity Taekwondo Admin Portal",
+  "short_name": "Infinity Admin",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "description": "Comprehensive administration system for Infinity Taekwondo.",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3565/3565457.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3565/3565457.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Students",
+      "short_name": "Students",
+      "description": "Output student management",
+      "url": "/students",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3565/3565457.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Attendance",
+      "short_name": "Attendance",
+      "description": "Take attendance",
+      "url": "/attendance",
+      "icons": [
+        {
+          "src": "https://cdn-icons-png.flaticon.com/512/3565/3565457.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": [
+    "productivity",
+    "education",
+    "sports"
+  ]
+}

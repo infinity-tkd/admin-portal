@@ -1,0 +1,5 @@
+{
+  "name": "Infinity TKD Admin Portal",
+  "description": "A comprehensive admin dashboard for managing students, attendance, payments, and events with role-based access control.",
+  "requestFramePermissions": []
+}
