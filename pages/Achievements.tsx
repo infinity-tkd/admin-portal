@@ -5,21 +5,25 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { formatDate } from '../utils/formatters';
 import { Avatar } from '../components/Avatar';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 
 import { useQueryClient } from '@tanstack/react-query';
 
 export const Achievements: React.FC = () => {
+    // Data Hook
     const { achievements: globalAchievements, students: globalStudents, events: globalEvents, refreshAchievements, globalLoading } = useData();
     const queryClient = useQueryClient();
+    const { showToast } = useToast();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedStudentFilter, setSelectedStudentFilter] = useState('');
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<{ type: 'save' | 'delete', id?: string, data?: Achievement | null } | null>(null);
 
+    // State
     const [currentAchievement, setCurrentAchievement] = useState<Partial<Achievement>>({});
+    const [deleteId, setDeleteId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     const loading = globalLoading && globalAchievements.length === 0;
@@ -76,66 +80,74 @@ export const Achievements: React.FC = () => {
         return sortedGroups;
     }, [globalAchievements, searchTerm, selectedStudentFilter, globalStudents]);
 
-    const handleSaveClick = (e: React.FormEvent) => {
+    const handleSaveClick = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!currentAchievement.studentId || !currentAchievement.eventName) return;
+        setSaving(true);
 
+        // Find Student Name if missing (since form only picks ID)
         const student = globalStudents.find(s => s.id === currentAchievement.studentId);
+
         const achievementToSave: Achievement = {
             id: currentAchievement.id || `ACH-${Date.now()}`,
             studentId: currentAchievement.studentId,
-            studentName: student?.englishName || 'Unknown',
+            studentName: student?.englishName || 'Unknown Warrior',
             eventName: currentAchievement.eventName,
-            date: currentAchievement.date || new Date().toISOString().split('T')[0],
             category: currentAchievement.category || '',
             division: currentAchievement.division || '',
             medal: currentAchievement.medal || 'Participate',
+            date: currentAchievement.date || new Date().toISOString().split('T')[0],
             notes: currentAchievement.notes || '',
             description: currentAchievement.description || ''
         };
 
-        setConfirmAction({ type: 'save', data: achievementToSave });
-        setIsConfirmOpen(true);
+        // Optimistic Update
+        queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => {
+            const list = old || [];
+            if (currentAchievement.id) {
+                return list.map(a => a.id === currentAchievement.id ? achievementToSave : a);
+            }
+            return [achievementToSave, ...list];
+        });
+
+        try {
+            await api.saveAchievement(achievementToSave);
+            await refreshAchievements();
+            showToast("Achievement recorded successfully.", "success");
+            setIsFormOpen(false);
+            setCurrentAchievement({});
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to save achievement.", "error");
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleDeleteClick = (id: string) => {
-        setConfirmAction({ type: 'delete', id });
+        setDeleteId(id);
         setIsConfirmOpen(true);
     };
 
-    const handleConfirm = async () => {
-        if (!confirmAction) return;
+    const handleConfirmDelete = async () => {
+        if (!deleteId) return;
         setSaving(true);
+        // Optimistic Delete
+        queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => (old || []).filter(a => a.id !== deleteId));
+
         try {
-            if (confirmAction.type === 'save' && confirmAction.data) {
-                const data = confirmAction.data;
-                // Optimistic Update
-                queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => {
-                    const list = old || [];
-                    const exists = list.find(a => a.id === data.id);
-                    if (exists) return list.map(a => a.id === data.id ? data : a);
-                    return [...list, data];
-                });
-
-                await api.saveAchievement(data);
-                setIsFormOpen(false);
-            } else if (confirmAction.type === 'delete' && confirmAction.id) {
-                // Optimistic Delete
-                queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => {
-                    return (old || []).filter(a => a.id !== confirmAction.id);
-                });
-
-                await api.deleteAchievement(confirmAction.id);
-                if (isFormOpen && currentAchievement.id === confirmAction.id) {
-                    setIsFormOpen(false);
-                }
-            }
+            await api.deleteAchievement(deleteId);
             await refreshAchievements();
-            setIsConfirmOpen(false);
-            setConfirmAction(null);
+            showToast("Achievement details removed.", "success");
+            if (isFormOpen && currentAchievement.id === deleteId) {
+                setIsFormOpen(false);
+            }
         } catch (error) {
             console.error(error);
+            showToast("Failed to delete achievement.", "error");
         } finally {
+            setIsConfirmOpen(false);
+            setDeleteId(null);
             setSaving(false);
         }
     };
@@ -175,7 +187,7 @@ export const Achievements: React.FC = () => {
                 </div>
                 <button
                     onClick={() => { setCurrentAchievement({ date: new Date().toISOString().split('T')[0], medal: 'Gold' }); setIsFormOpen(true); }}
-                    className="bg-primary text-white px-8 py-4 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
+                    className="bg-primary text-white px-8 py-4 rounded-md font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
                 >
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                     <span>Honor Warrior</span>
@@ -188,7 +200,7 @@ export const Achievements: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Search events or champions..."
-                        className="w-full pl-11 pr-5 py-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm h-full"
+                        className="w-full pl-11 pr-5 py-3.5 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm h-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -199,7 +211,7 @@ export const Achievements: React.FC = () => {
                     <select
                         value={selectedStudentFilter}
                         onChange={(e) => setSelectedStudentFilter(e.target.value)}
-                        className="w-full pl-5 pr-10 py-3.5 bg-white border border-slate-200 rounded-xl focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 text-sm h-full appearance-none cursor-pointer"
+                        className="w-full pl-5 pr-10 py-3.5 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 text-sm h-full appearance-none cursor-pointer"
                     >
                         <option value="">All Warriors</option>
                         {globalStudents.map(s => (
@@ -244,7 +256,7 @@ export const Achievements: React.FC = () => {
                                         <motion.div
                                             key={eventName}
                                             whileHover={{ y: -4 }}
-                                            className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
+                                            className="bg-white rounded-lg border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
                                         >
                                             <header className="p-4 bg-slate-50 border-b border-slate-100">
                                                 <div className="flex items-center justify-between mb-1">
@@ -256,10 +268,10 @@ export const Achievements: React.FC = () => {
 
                                             <div className="p-4 space-y-3">
                                                 {eventItems.map((item) => (
-                                                    <div key={item.id} className="group/item relative bg-white rounded-lg p-3 border border-slate-100 hover:border-yellow-200 hover:shadow-sm transition-all duration-200">
+                                                    <div key={item.id} className="group/item relative bg-white rounded-md p-3 border border-slate-100 hover:border-yellow-200 hover:shadow-sm transition-all duration-200">
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex items-center space-x-3">
-                                                                <div className={`h-8 w-8 rounded-lg flex items-center justify-center shadow-sm transform group-hover/item:rotate-12 transition-transform ${item.medal === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 text-white' :
+                                                                <div className={`h-8 w-8 rounded-md flex items-center justify-center shadow-sm transform group-hover/item:rotate-12 transition-transform ${item.medal === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 text-white' :
                                                                     item.medal === 'Silver' ? 'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-700' :
                                                                         item.medal === 'Bronze' ? 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600 text-white' :
                                                                             'bg-slate-100 text-slate-400'
@@ -313,7 +325,7 @@ export const Achievements: React.FC = () => {
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
+                            className="relative bg-white rounded-t-2xl lg:rounded-lg shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
                         >
                             <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 backdrop-blur-xl sticky top-0 z-20">
                                 <div>
@@ -327,12 +339,12 @@ export const Achievements: React.FC = () => {
                                 </button>
                             </header>
 
-                            <form onSubmit={handleSaveClick} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-5">
+                            <form id="achievement-form" onSubmit={handleSaveClick} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-5">
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Recipient</label>
                                     <select
                                         required
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
                                         value={currentAchievement.studentId || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, studentId: e.target.value })}
                                         disabled={!!currentAchievement.id}
@@ -346,7 +358,7 @@ export const Achievements: React.FC = () => {
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Event Selector</label>
                                     <div className="relative">
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
                                             onChange={handleEventSelect}
                                             value={globalEvents.some(e => e.title === currentAchievement.eventName) ? globalEvents.find(e => e.title === currentAchievement.eventName)?.id : ''}
                                         >
@@ -357,7 +369,7 @@ export const Achievements: React.FC = () => {
                                     </div>
                                     <input
                                         type="text"
-                                        className="w-full px-5 py-3 bg-white border border-slate-200 rounded-lg mt-2 text-sm font-bold text-slate-700"
+                                        className="w-full px-5 py-3 bg-white border border-slate-200 rounded-md mt-2 text-sm font-bold text-slate-700"
                                         placeholder="Or type custom event name..."
                                         value={currentAchievement.eventName || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, eventName: e.target.value })}
@@ -368,7 +380,7 @@ export const Achievements: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Category</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
                                             value={currentAchievement.category || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, category: e.target.value })}
                                         >
@@ -384,7 +396,7 @@ export const Achievements: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Division</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
                                             value={currentAchievement.division || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, division: e.target.value })}
                                         >
@@ -403,7 +415,7 @@ export const Achievements: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Rank / Medal</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
                                             value={currentAchievement.medal || 'Participate'}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, medal: e.target.value })}
                                         >
@@ -417,7 +429,7 @@ export const Achievements: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Date</label>
                                         <input
                                             type="date" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm"
                                             value={currentAchievement.date || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, date: e.target.value })}
                                         />
@@ -427,32 +439,33 @@ export const Achievements: React.FC = () => {
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Notes / Description</label>
                                     <textarea
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm h-20 resize-none"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm h-20 resize-none"
                                         placeholder="Additional details..."
                                         value={currentAchievement.notes || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, notes: e.target.value, description: e.target.value })}
                                     />
                                 </div>
 
-                                <div className="flex items-center space-x-3 pt-2">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
-                                    >
-                                        {saving ? 'Processing...' : (currentAchievement.id ? 'Save Changes' : 'Confer Honor')}
-                                    </button>
-                                    {currentAchievement.id && (
-                                        <button
-                                            type="button"
-                                            onClick={() => { setIsFormOpen(false); handleDeleteClick(currentAchievement.id!); }}
-                                            className="px-6 py-4 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
-                                        >
-                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-                                    )}
-                                </div>
                             </form>
+                            <div className="px-6 py-5 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center space-x-3">
+                                <button
+                                    form="achievement-form"
+                                    type="submit"
+                                    disabled={saving}
+                                    className="flex-1 bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                >
+                                    {saving ? 'Processing...' : (currentAchievement.id ? 'Save Changes' : 'Confer Honor')}
+                                </button>
+                                {currentAchievement.id && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsFormOpen(false); handleDeleteClick(currentAchievement.id!); }}
+                                        className="px-6 py-4 rounded-md bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                )}
+                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -461,15 +474,11 @@ export const Achievements: React.FC = () => {
             <ConfirmationModal
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
-                onConfirm={handleConfirm}
-                title={confirmAction?.type === 'delete' ? 'Retire Honor' : 'Save Honor'}
-                message={
-                    confirmAction?.type === 'delete'
-                        ? 'Are you sure you want to remove this achievement from the Hall of Fame? This action cannot be undone.'
-                        : 'Are you sure you want to save this achievement details?'
-                }
-                confirmText={confirmAction?.type === 'delete' ? 'Retire' : 'Save'}
-                isDestructive={confirmAction?.type === 'delete'}
+                onConfirm={handleConfirmDelete}
+                title="Retire Honor"
+                message="Are you sure you want to remove this achievement from the Hall of Fame? This action cannot be undone."
+                confirmText="Retire"
+                isDestructive={true}
                 isLoading={saving}
             />
         </div>

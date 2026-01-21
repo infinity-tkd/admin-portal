@@ -112,13 +112,17 @@ const AppRoutes: React.FC = () => {
     );
 }
 
+import { ToastProvider } from './context/ToastContext';
+
 const App: React.FC = () => {
     return (
         <AuthProvider>
             <DataProvider>
-                <Router>
-                    <AppRoutes />
-                </Router>
+                <ToastProvider>
+                    <Router>
+                        <AppRoutes />
+                    </Router>
+                </ToastProvider>
             </DataProvider>
         </AuthProvider>
     );

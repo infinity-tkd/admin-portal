@@ -4,6 +4,7 @@ import { Payment, Student } from '../types';
 import { motion, AnimatePresence } from 'framer-motion';
 import { formatDate } from '../utils/formatters';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import { useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '../components/Avatar';
 
@@ -71,6 +72,7 @@ export const Payments: React.FC = () => {
     }, [searchTerm, statusFilter, yearFilter, monthFilter, globalPayments]);
 
     const queryClient = useQueryClient();
+    const { showToast } = useToast(); // Added useToast hook
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -78,7 +80,7 @@ export const Payments: React.FC = () => {
 
         const yr = Number(currentPayment.year);
         if (yr < 2025) {
-            alert("Entry for years before 2025 is restricted.");
+            showToast("Entry for years before 2025 is restricted.", "warning"); // Replaced alert
             return;
         }
 
@@ -103,16 +105,14 @@ export const Payments: React.FC = () => {
 
             // Payload for backend (omit studentName as per user request to let backend handle lookup)
             const { studentName, ...apiPayload } = saved;
-            await api.savePayment(apiPayload as Payment);
 
-            // OPTIMISTIC UPDATE: Update cache immediately
+            // Optimistic Update: Update cache immediately
             queryClient.setQueryData(['payments'], (old: Payment[] | undefined) => {
-                const current = old || [];
-                const exists = current.findIndex(p => p.id === saved.id);
-                if (exists >= 0) {
-                    return current.map(p => p.id === saved.id ? saved : p);
+                const list = old || [];
+                if (currentPayment.id) { // If editing an existing payment
+                    return list.map(p => p.id === currentPayment.id ? saved : p);
                 }
-                return [...current, saved];
+                return [...list, saved]; // If adding a new payment
             });
 
             await refreshPayments();
@@ -151,7 +151,7 @@ export const Payments: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="lg:col-span-2 bg-primary rounded-lg p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[180px] sm:min-h-[220px]"
+                    className="lg:col-span-2 bg-primary rounded-md p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[180px] sm:min-h-[220px]"
                 >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 blur-[80px] -mr-32 -mt-32" />
                     <div className="relative z-10">
@@ -178,10 +178,10 @@ export const Payments: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="bg-white border border-slate-200 rounded-lg p-6 sm:p-8 flex flex-col justify-between shadow-sm"
+                    className="bg-white border border-slate-200 rounded-md p-6 sm:p-8 flex flex-col justify-between shadow-sm"
                 >
                     <div className="space-y-3">
-                        <div className="h-11 w-11 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-black shadow-inner">
+                        <div className="h-11 w-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-black shadow-inner">
                             $
                         </div>
                         <h3 className="text-xl font-black font-display text-slate-900 leading-tight">Income Entry</h3>
@@ -196,7 +196,7 @@ export const Payments: React.FC = () => {
                             });
                             setIsModalOpen(true);
                         }}
-                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 active:scale-95 transition-all mt-3 sm:mt-5"
+                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-md font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 active:scale-95 transition-all mt-3 sm:mt-5"
                     >
                         Create Transaction
                     </button>
@@ -209,14 +209,14 @@ export const Payments: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Student name or ID..."
-                        className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm"
+                        className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-md focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 transition-colors group-focus-within:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
 
-                <div className="flex bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
                     {years.map(y => (
                         <button
                             key={y}
@@ -229,7 +229,7 @@ export const Payments: React.FC = () => {
                 </div>
 
                 <select
-                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-xs appearance-none cursor-pointer"
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-xs appearance-none cursor-pointer"
                     value={monthFilter}
                     onChange={(e) => setMonthFilter(e.target.value)}
                 >
@@ -237,7 +237,7 @@ export const Payments: React.FC = () => {
                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
 
-                <div className="flex bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
                     {['All', 'Paid', 'Unpaid'].map(s => (
                         <button
                             key={s}
@@ -251,11 +251,11 @@ export const Payments: React.FC = () => {
             </div>
 
             {/* TRANSACTION LIST */}
-            <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <div className="overflow-x-auto">
+            <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-x-auto flex flex-col">
+                <div className="min-w-[800px] lg:min-w-0">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100">
+                            <tr className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
                                 <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">MONTH / YEAR</th>
                                 <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Student</th>
                                 <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Amount</th>
@@ -347,7 +347,7 @@ export const Payments: React.FC = () => {
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col mt-auto lg:my-8 max-h-[85vh] lg:max-h-[90vh]"
+                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col mt-auto lg:my-8 max-h-[85vh] lg:max-h-[90vh]"
                         >
                             <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
                                 <div>
@@ -361,12 +361,12 @@ export const Payments: React.FC = () => {
                                 </button>
                             </header>
 
-                            <form onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-6">
+                            <form id="payment-form" onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-6">
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Warrior Entity</label>
                                     <select
                                         required
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 appearance-none"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 appearance-none"
                                         value={currentPayment.studentId || ''}
                                         onChange={e => {
                                             const s = globalStudents.find(st => st.id === e.target.value);
@@ -384,7 +384,7 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">For Month</label>
                                         <select
                                             required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-900 appearance-none text-sm"
                                             value={currentPayment.forMonth || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, forMonth: e.target.value })}
                                         >
@@ -396,7 +396,7 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Year</label>
                                         <input
                                             type="number" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-black text-slate-900 text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-black text-slate-900 text-sm"
                                             value={currentPayment.year || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, year: e.target.value })}
                                         />
@@ -407,24 +407,24 @@ export const Payments: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Amount ($)</label>
                                         <input
-                                            type="number" step="0.01" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-slate-900 text-lg text-center"
+                                            type="number" step="0.01" min="0" required
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-slate-900 text-lg text-center"
                                             value={currentPayment.amount || ''}
-                                            onChange={e => setCurrentPayment({ ...currentPayment, amount: Number(e.target.value) })}
+                                            onChange={e => setCurrentPayment({ ...currentPayment, amount: Math.max(0, parseFloat(e.target.value)) })}
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Payment Date</label>
                                         <input
                                             type="date" required
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm"
                                             value={currentPayment.date || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, date: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex bg-slate-100/50 p-1 rounded-lg border border-slate-200">
+                                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
                                     {['Paid', 'Unpaid'].map(s => (
                                         <button
                                             key={s}
@@ -437,14 +437,17 @@ export const Payments: React.FC = () => {
                                     ))}
                                 </div>
 
+                            </form>
+                            <div className="px-6 py-5 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20">
                                 <button
+                                    form="payment-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="w-full bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none mt-4"
+                                    className="w-full bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing Txn...' : 'Lock Transaction'}
                                 </button>
-                            </form>
+                            </div>
                         </motion.div>
                     </div>
                 )}

@@ -34,7 +34,7 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative p-4 sm:p-5 rounded-lg bg-white border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-500"
+      className="group relative p-4 sm:p-5 rounded-md bg-white border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-500"
     >
       <div className="relative z-10 flex items-center space-x-4">
         <div className={`h-10 w-10 rounded bg-slate-50 flex items-center justify-center ${color} transition-all duration-500`}>
@@ -93,7 +93,7 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm"
+              className="bg-white p-6 rounded-md border border-slate-100 shadow-sm"
             >
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Command Center</h3>
@@ -125,7 +125,7 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="bg-primary p-6 rounded-lg text-white shadow-xl relative overflow-hidden"
+              className="bg-primary p-6 rounded-md text-white shadow-xl relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 blur-[60px]" />
               <div className="relative z-10 flex items-center justify-between mb-8">
@@ -190,7 +190,7 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm"
+            className="bg-white p-6 rounded-md border border-slate-100 shadow-sm"
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Notifications</h3>
@@ -205,7 +205,7 @@ export const Dashboard: React.FC = () => {
                 .sort((a, b) => b.timestamp - a.timestamp)
                 .slice(0, 5)
                 .map((activity, i) => (
-                  <div key={i} className="flex items-start space-x-4 p-3 rounded-lg hover:bg-slate-50 transition-colors">
+                  <div key={i} className="flex items-start space-x-4 p-3 rounded-md hover:bg-slate-50 transition-colors">
                     <div className={`h-8 w-8 rounded flex items-center justify-center text-sm ${activity.type === 'Payment' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
                       {activity.type === 'Payment' ? '💰' : '📅'}
                     </div>
@@ -231,7 +231,7 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm h-full"
+            className="bg-white p-6 rounded-md border border-slate-100 shadow-sm h-full"
           >
             <div className="text-center">
               <div className="h-24 w-24 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg relative">
@@ -256,7 +256,7 @@ export const Dashboard: React.FC = () => {
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-primary text-white rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 transition-all">
+              <button className="w-full py-3 bg-primary text-white rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 transition-all">
                 Edit Profile
               </button>
             </div>

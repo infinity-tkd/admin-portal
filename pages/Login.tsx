@@ -42,7 +42,7 @@ export const Login: React.FC = () => {
         transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
         className="w-full max-w-[400px] z-10"
       >
-        <div className="bg-white rounded-lg p-8 md:p-10 shadow-2xl border border-white/10 relative overflow-hidden group">
+        <div className="bg-white rounded-md p-8 md:p-10 shadow-2xl border border-white/10 relative overflow-hidden group">
           <div className="relative z-10">
             <header className="mb-8 text-center">
               <div className="flex justify-center mb-6">
@@ -64,7 +64,7 @@ export const Login: React.FC = () => {
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-sm placeholder:text-slate-300 shadow-sm"
+                  className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-sm placeholder:text-slate-300 shadow-sm"
                   placeholder="Username"
                   required
                 />
@@ -77,7 +77,7 @@ export const Login: React.FC = () => {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-sm placeholder:text-slate-300 shadow-sm pr-12"
+                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-sm placeholder:text-slate-300 shadow-sm pr-12"
                     placeholder="••••••••"
                     required
                   />
@@ -110,7 +110,7 @@ export const Login: React.FC = () => {
                 <motion.div
                   initial={{ opacity: 0, y: -5 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="p-3.5 bg-red-50 border border-red-100 rounded-lg flex items-center space-x-3 text-red-500 text-[9px] font-black uppercase tracking-widest"
+                  className="p-3.5 bg-red-50 border border-red-100 rounded-md flex items-center space-x-3 text-red-500 text-[9px] font-black uppercase tracking-widest"
                 >
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                   <span>{error}</span>
@@ -120,7 +120,7 @@ export const Login: React.FC = () => {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.3em] shadow-lg shadow-primary/20 hover:bg-slate-900 active:scale-95 transition-all outline-none disabled:opacity-50"
+                className="w-full bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.3em] shadow-lg shadow-primary/20 hover:bg-slate-900 active:scale-95 transition-all outline-none disabled:opacity-50"
               >
                 {isLoading ? 'Decrypting...' : 'Enter System'}
               </button>

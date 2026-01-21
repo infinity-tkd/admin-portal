@@ -4,17 +4,20 @@ import { Event } from '../types';
 import { formatDate } from '../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useData } from '../context/DataContext';
+import { useToast } from '../context/ToastContext';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import { useQueryClient } from '@tanstack/react-query';
 
 export const Events: React.FC = () => {
     const { events: globalEvents, refreshEvents, globalLoading } = useData();
     const queryClient = useQueryClient();
+    const { showToast } = useToast();
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
-    const [confirmAction, setConfirmAction] = useState<{ type: 'save' | 'delete', id?: string, data?: Event | null } | null>(null);
 
+    // State
     const [currentEvent, setCurrentEvent] = useState<Partial<Event>>({});
+    const [deleteId, setDeleteId] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
 
     // Filter States
@@ -121,64 +124,75 @@ export const Events: React.FC = () => {
         return dateB - dateA;
     });
 
-    const handleSaveClick = (e: React.FormEvent) => {
+    const handleSaveClick = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!currentEvent.title || !currentEvent.eventStart || !currentEvent.eventClose) return;
-
-        // Prepare the datum
-        const eventToSave = {
-            ...currentEvent,
-            status: currentEvent.status || 'Open',
-            type: currentEvent.type || 'Tournament',
-            location: currentEvent.location || 'TBA'
-        } as Event;
-
-        setConfirmAction({ type: 'save', data: eventToSave });
-        setIsConfirmOpen(true);
-    };
-
-    const handleDeleteClick = (id: string) => {
-        setConfirmAction({ type: 'delete', id });
-        setIsConfirmOpen(true);
-    };
-
-    const handleConfirm = async () => {
-        if (!confirmAction) return;
+        if (!currentEvent.title || !currentEvent.eventStart || !currentEvent.eventClose) {
+            showToast("Please fill in all required fields: Title, Event Start, Event Close.", "error");
+            return;
+        }
         setSaving(true);
-        try {
-            if (confirmAction.type === 'save' && confirmAction.data) {
-                const eventToSave = confirmAction.data;
 
-                // OPTIMISTIC UPDATE
-                queryClient.setQueryData(['events'], (old: Event[] | undefined) => {
-                    const current = old || [];
-                    if (eventToSave.id) {
-                        const exists = current.find(e => e.id === eventToSave.id);
-                        if (exists) return current.map(e => e.id === eventToSave.id ? eventToSave : e);
-                    }
-                    return [eventToSave, ...current]; // Add new event to top
-                });
+        const saved: Event = {
+            id: currentEvent.id || `EVT-${Date.now()}`,
+            title: currentEvent.title || 'Untitled Event',
+            type: currentEvent.type || 'Tournament',
+            regStart: currentEvent.regStart || '',
+            regClose: currentEvent.regClose || '',
+            eventStart: currentEvent.eventStart || '',
+            eventClose: currentEvent.eventClose || '',
+            location: currentEvent.location || '',
+            description: currentEvent.description || '',
+            status: currentEvent.status as 'Open' | 'Closed' | 'Upcoming' || 'Open'
+        };
 
-                await api.saveEvent(eventToSave);
-                setIsFormOpen(false);
-            } else if (confirmAction.type === 'delete' && confirmAction.id) {
-                // OPTIMISTIC DELETE
-                queryClient.setQueryData(['events'], (old: Event[] | undefined) => {
-                    return (old || []).filter(e => e.id !== confirmAction.id);
-                });
-
-                await api.deleteEvent(confirmAction.id);
-                // If deleting from within the modal, close form
-                if (isFormOpen && currentEvent.id === confirmAction.id) {
-                    setIsFormOpen(false);
-                }
+        // Optimistic Update
+        queryClient.setQueryData(['events'], (old: Event[] | undefined) => {
+            const list = old || [];
+            if (currentEvent.id) {
+                return list.map(ev => ev.id === currentEvent.id ? saved : ev);
             }
-            // Background Refresh
-            refreshEvents();
-            setIsConfirmOpen(false);
-            setConfirmAction(null);
+            return [...list, saved];
+        });
+
+        try {
+            await api.saveEvent(saved);
+            await refreshEvents();
+            showToast(currentEvent.id ? "Event updated successfully." : "New event created.", "success");
+            setIsFormOpen(false);
+            setCurrentEvent({});
         } catch (error) {
             console.error(error);
+            showToast("Failed to save event.", "error");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const confirmDelete = (id: string) => {
+        setDeleteId(id);
+        setIsConfirmOpen(true);
+    };
+
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        setSaving(true);
+        try {
+            // Optimistic Delete
+            queryClient.setQueryData(['events'], (old: Event[] | undefined) => (old || []).filter(e => e.id !== deleteId));
+
+            await api.deleteEvent(deleteId);
+            await refreshEvents();
+            showToast("Event deleted successfully.", "success");
+            setIsConfirmOpen(false);
+            setDeleteId(null);
+            // If deleting from within the modal, close form
+            if (isFormOpen && currentEvent.id === deleteId) {
+                setIsFormOpen(false);
+                setCurrentEvent({});
+            }
+        } catch (error) {
+            console.error(error);
+            showToast("Failed to delete event.", "error");
         } finally {
             setSaving(false);
         }
@@ -202,7 +216,7 @@ export const Events: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-3">
                     {/* FILTERS */}
-                    <div className="flex items-center space-x-2 bg-white p-1 rounded-xl border border-slate-200 shadow-sm">
+                    <div className="flex items-center space-x-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
                         <select
                             value={filterYear}
                             onChange={(e) => setFilterYear(e.target.value)}
@@ -235,7 +249,7 @@ export const Events: React.FC = () => {
                             });
                             setIsFormOpen(true);
                         }}
-                        className="bg-primary text-white px-6 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
+                        className="bg-primary text-white px-6 py-3.5 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
                         <span>Add Event</span>
@@ -262,7 +276,7 @@ export const Events: React.FC = () => {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
                                 key={event.id}
-                                className="bg-white rounded-lg p-5 md:p-7 border border-slate-200 shadow-sm flex flex-col hover:shadow-xl transition-all duration-500 group relative overflow-hidden"
+                                className="bg-white rounded-md p-5 md:p-7 border border-slate-200 shadow-sm flex flex-col hover:shadow-xl transition-all duration-500 group relative overflow-hidden"
                             >
                                 <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-accent opacity-[0.02] rounded-bl-full group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
 
@@ -293,7 +307,7 @@ export const Events: React.FC = () => {
                                             });
                                             setIsFormOpen(true);
                                         }}
-                                        className="h-8 w-8 rounded-lg bg-white border border-slate-100 text-slate-400 hover:text-accent flex items-center justify-center shadow-sm opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all cursor-pointer"
+                                        className="h-8 w-8 rounded-md bg-white border border-slate-100 text-slate-400 hover:text-accent flex items-center justify-center shadow-sm opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-all cursor-pointer"
                                     >
                                         <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                     </button>
@@ -353,7 +367,7 @@ export const Events: React.FC = () => {
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-3xl lg:rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
+                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
                         >
                             <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 backdrop-blur-xl sticky top-0 z-10">
                                 <div>
@@ -367,14 +381,14 @@ export const Events: React.FC = () => {
                                 </button>
                             </header>
 
-                            <form onSubmit={handleSaveClick} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-6">
+                            <form id="event-form" onSubmit={handleSaveClick} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-6">
                                 <div className="grid grid-cols-2 gap-5">
                                     <div className="col-span-2 space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Event Name</label>
                                         <input
                                             required
                                             placeholder="e.g., National Championship 2026"
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-lg"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 text-lg"
                                             value={currentEvent.title || ''}
                                             onChange={e => setCurrentEvent({ ...currentEvent, title: e.target.value })}
                                         />
@@ -383,7 +397,7 @@ export const Events: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Type</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900 text-sm appearance-none"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm appearance-none"
                                             value={currentEvent.type || 'Tournament'}
                                             onChange={e => setCurrentEvent({ ...currentEvent, type: e.target.value })}
                                         >
@@ -397,7 +411,7 @@ export const Events: React.FC = () => {
                                     <div className="space-y-2">
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Status</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-900 text-sm appearance-none"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm appearance-none"
                                             value={currentEvent.status || 'Open'}
                                             onChange={e => setCurrentEvent({ ...currentEvent, status: e.target.value as any })}
                                         >
@@ -410,31 +424,55 @@ export const Events: React.FC = () => {
                                 </div>
 
                                 {/* DATE SECTION */}
-                                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-4">
+                                <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Event Start</label>
-                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-accent"
+                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-md text-sm font-bold text-slate-700 outline-none focus:border-accent"
                                                 value={currentEvent.eventStart || ''}
                                                 onChange={e => setCurrentEvent({ ...currentEvent, eventStart: e.target.value })} />
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Event Close</label>
-                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-accent"
-                                                value={currentEvent.eventClose || ''}
-                                                onChange={e => setCurrentEvent({ ...currentEvent, eventClose: e.target.value })} />
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Reg Start</label>
+                                                <input
+                                                    type="date" required
+                                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm"
+                                                    value={currentEvent.regStart ? new Date(currentEvent.regStart).toISOString().split('T')[0] : ''}
+                                                    onChange={e => setCurrentEvent({ ...currentEvent, regStart: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Reg Close</label>
+                                                <input
+                                                    type="date" required
+                                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm"
+                                                    value={currentEvent.regClose ? new Date(currentEvent.regClose).toISOString().split('T')[0] : ''}
+                                                    onChange={e => setCurrentEvent({ ...currentEvent, regClose: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Reg Start</label>
-                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-accent"
-                                                value={currentEvent.regStart || ''}
-                                                onChange={e => setCurrentEvent({ ...currentEvent, regStart: e.target.value })} />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Reg Close</label>
-                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-accent"
-                                                value={currentEvent.regClose || ''}
-                                                onChange={e => setCurrentEvent({ ...currentEvent, regClose: e.target.value })} />
+
+                                        <div className="grid grid-cols-2 gap-5">
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Event Start</label>
+                                                <input
+                                                    type="datetime-local" required
+                                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm"
+                                                    // Handle datetime-local format: YYYY-MM-DDTHH:mm
+                                                    value={currentEvent.eventStart ? new Date(currentEvent.eventStart).toISOString().slice(0, 16) : ''}
+                                                    onChange={e => setCurrentEvent({ ...currentEvent, eventStart: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Event Close</label>
+                                                <input
+                                                    type="datetime-local" required
+                                                    className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 text-sm"
+                                                    value={currentEvent.eventClose ? new Date(currentEvent.eventClose).toISOString().slice(0, 16) : ''}
+                                                    onChange={e => setCurrentEvent({ ...currentEvent, eventClose: e.target.value })}
+                                                />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -442,7 +480,7 @@ export const Events: React.FC = () => {
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Location</label>
                                     <input
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm"
                                         value={currentEvent.location || ''}
                                         onChange={e => setCurrentEvent({ ...currentEvent, location: e.target.value })}
                                         placeholder="Detailed venue address..."
@@ -452,33 +490,35 @@ export const Events: React.FC = () => {
                                 <div className="space-y-2">
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Description</label>
                                     <textarea
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none font-bold text-slate-700 text-sm h-24 resize-none"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm h-24 resize-none"
                                         placeholder="Additional event details..."
                                         value={currentEvent.description || ''}
                                         onChange={e => setCurrentEvent({ ...currentEvent, description: e.target.value })}
                                     />
                                 </div>
 
-                                <div className="flex items-center space-x-3 pt-4 border-t border-slate-100">
-                                    <button
-                                        type="submit"
-                                        disabled={saving}
-                                        className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
-                                    >
-                                        {saving ? 'Processing...' : (currentEvent.id ? 'Save Changes' : 'Create Event')}
-                                    </button>
 
-                                    {currentEvent.id && (
-                                        <button
-                                            type="button"
-                                            onClick={() => { setIsFormOpen(false); handleDeleteClick(currentEvent.id!); }}
-                                            className="px-6 py-4 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
-                                        >
-                                            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-                                    )}
-                                </div>
                             </form>
+                            <div className="px-6 py-5 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center space-x-3">
+                                <button
+                                    form="event-form"
+                                    type="submit"
+                                    disabled={saving}
+                                    className="flex-1 bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                >
+                                    {saving ? 'Processing...' : (currentEvent.id ? 'Save Changes' : 'Create Event')}
+                                </button>
+
+                                {currentEvent.id && (
+                                    <button
+                                        type="button"
+                                        onClick={() => { setIsFormOpen(false); confirmDelete(currentEvent.id!); }}
+                                        className="px-6 py-4 rounded-md bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
+                                    >
+                                        <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                    </button>
+                                )}
+                            </div>
                         </motion.div>
                     </div>
                 )}
@@ -487,17 +527,13 @@ export const Events: React.FC = () => {
             <ConfirmationModal
                 isOpen={isConfirmOpen}
                 onClose={() => setIsConfirmOpen(false)}
-                onConfirm={handleConfirm}
-                title={confirmAction?.type === 'delete' ? 'Delete Event' : 'Save Event'}
-                message={
-                    confirmAction?.type === 'delete'
-                        ? 'Are you sure you want to permanently delete this event? This action cannot be undone.'
-                        : 'Are you sure you want to save these changes to the event timeline?'
-                }
-                confirmText={confirmAction?.type === 'delete' ? 'Delete' : 'Save'}
-                isDestructive={confirmAction?.type === 'delete'}
+                onConfirm={handleDelete}
+                title="Delete Event"
+                message="Are you sure you want to permanently delete this event? This action cannot be undone."
+                confirmText="Delete"
+                isDestructive={true}
                 isLoading={saving}
             />
-        </div>
+        </div >
     );
 };
