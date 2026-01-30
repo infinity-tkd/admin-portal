@@ -1,5 +1,19 @@
 
 import { Student, Attendance, Payment, Event, User, Role, Achievement } from '../types';
+
+export interface AdminUser {
+  username: string;
+  password?: string; // Optional for updates
+  displayName: string;
+  role: 'admin' | 'coach' | 'assistant_coach';
+  avatarUrl?: string;
+}
+
+export interface StudentLogin {
+  studentId: string;
+  name?: string;
+  hasPassword: boolean;
+}
 import { MOCK_STUDENTS, MOCK_ATTENDANCE, MOCK_PAYMENTS, MOCK_EVENTS, MOCK_ACHIEVEMENTS } from './mockData';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -64,7 +78,9 @@ class ApiService {
       attendance: [...MOCK_ATTENDANCE],
       payments: [...MOCK_PAYMENTS],
       events: [...MOCK_EVENTS],
-      achievements: [...MOCK_ACHIEVEMENTS]
+      activeStudentsCount: MOCK_STUDENTS.length, // Placeholder for mock
+      users: [],
+      studentLogins: []
     };
   }
 
@@ -150,11 +166,7 @@ class ApiService {
     return student;
   }
 
-  async updateStudentPassword(studentId: string, newPass: string): Promise<boolean> {
-    if (!USE_MOCK) return this.callApi('adminUpdateStudentPassword', { studentId, newPassword: newPass });
-    await new Promise(r => setTimeout(r, 600));
-    return true;
-  }
+
 
   async deleteStudent(id: string): Promise<void> {
     // Not implemented in backend yet
@@ -234,6 +246,38 @@ class ApiService {
   async deleteAchievement(id: string): Promise<void> {
     if (!USE_MOCK) return this.callApi('adminDeleteAchievement', { id });
     await new Promise(r => setTimeout(r, 500));
+  }
+
+  // --- USER MANAGEMENT (TEAM) ---
+  async getUsers(): Promise<AdminUser[]> {
+    if (!USE_MOCK) return this.callApi('adminGetUsers');
+    await new Promise(r => setTimeout(r, 500));
+    return [];
+  }
+
+  async saveUser(user: AdminUser): Promise<AdminUser> {
+    if (!USE_MOCK) return this.callApi('adminSaveUser', user);
+    await new Promise(r => setTimeout(r, 500));
+    return user;
+  }
+
+  async deleteUser(username: string): Promise<boolean> {
+    if (!USE_MOCK) return this.callApi('adminDeleteUser', { username });
+    await new Promise(r => setTimeout(r, 500));
+    return true;
+  }
+
+  // --- STUDENT ACCESS ---
+  async getStudentLogins(): Promise<StudentLogin[]> {
+    if (!USE_MOCK) return this.callApi('adminGetStudentLogins');
+    await new Promise(r => setTimeout(r, 500));
+    return [];
+  }
+
+  async updateStudentPassword(studentId: string, newPass: string): Promise<boolean> {
+    if (!USE_MOCK) return this.callApi('adminUpdateStudentPassword', { studentId, newPassword: newPass });
+    await new Promise(r => setTimeout(r, 500));
+    return true;
   }
 }
 

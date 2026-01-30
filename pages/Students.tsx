@@ -111,7 +111,7 @@ export const Students: React.FC = () => {
                         <input
                             type="text"
                             placeholder="Search by Name, ID or Khmer Name..."
-                            className="block w-full pl-12 sm:pl-14 pr-6 sm:pr-8 py-4 sm:py-5 bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-[12px] focus:ring-primary/5 focus:border-primary outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm text-sm sm:text-base"
+                            className="block w-full pl-12 sm:pl-14 pr-6 sm:pr-8 py-4 sm:py-5 bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm text-base"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -142,8 +142,8 @@ export const Students: React.FC = () => {
                                 transition={{ delay: i * 0.04 }}
                                 key={belt}
                                 onClick={() => setSelectedBelt(belt)}
-                                className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-md sm:rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${selectedBelt === belt
-                                    ? 'bg-primary border-primary text-white shadow-2xl shadow-primary/30 scale-105'
+                                className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${selectedBelt === belt
+                                    ? 'bg-primary border-primary text-white shadow-xl shadow-primary/30 scale-105'
                                     : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300 hover:text-slate-600'
                                     }`}
                             >
@@ -227,7 +227,7 @@ export const Students: React.FC = () => {
                             transition={{ duration: 0.2 }}
                             key={s.id}
                             onClick={() => { setCurrentStudent(s); setIsDetailOpen(true); }}
-                            className="bg-white p-4 sm:p-5 rounded-lg border border-slate-200 shadow-sm active:scale-[0.98] transition-all flex items-center space-x-3 sm:space-x-4 group"
+                            className="bg-white p-4 sm:p-5 rounded-xl border border-slate-100 shadow-sm active:scale-[0.98] transition-all flex items-center space-x-3 sm:space-x-4 group"
                         >
                             <div className="relative">
                                 <Avatar profilePictureId={s.profilePictureId} name={s.englishName} size="md" />
@@ -384,7 +384,7 @@ export const Students: React.FC = () => {
                                             </div>
                                             <button
                                                 onClick={() => { setIsDetailOpen(false); setIsEditModalOpen(true); }}
-                                                className="w-full py-4 bg-slate-900 text-white rounded-lg font-black text-[10px] uppercase tracking-[.25em] hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20"
+                                                className="w-full py-4 bg-slate-900 text-white rounded-lg font-black text-[10px] uppercase tracking-[.25em] hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 active:scale-95"
                                             >
                                                 Edit Student
                                             </button>
@@ -532,7 +532,7 @@ export const Students: React.FC = () => {
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Photo ID ID</label>
                                             <input
-                                                className="w-full px-5 py-3 bg-white border border-slate-200 rounded-lg outline-none font-mono text-[11px] text-slate-500 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-lg outline-none font-mono text-base text-slate-600 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
                                                 value={currentStudent.profilePictureId || ''}
                                                 onChange={(e) => setCurrentStudent({ ...currentStudent, profilePictureId: e.target.value })}
                                                 placeholder="Paste Google Drive File ID"
@@ -541,7 +541,7 @@ export const Students: React.FC = () => {
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">E-Sign ID</label>
                                             <input
-                                                className="w-full px-5 py-3 bg-white border border-slate-200 rounded-lg outline-none font-mono text-[11px] text-slate-500 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-lg outline-none font-mono text-base text-slate-600 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
                                                 value={currentStudent.eSignId || ''}
                                                 onChange={(e) => setCurrentStudent({ ...currentStudent, eSignId: e.target.value })}
                                                 placeholder="Paste Google Drive File ID"
@@ -573,7 +573,7 @@ export const Students: React.FC = () => {
                                 <button
                                     onClick={handleSave}
                                     disabled={saving}
-                                    className="px-12 py-5 bg-primary text-white rounded-xl font-black text-[11px] uppercase tracking-[.3em] shadow-2xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all flex items-center space-x-3"
+                                    className="px-12 py-5 bg-primary text-white rounded-lg font-black text-[11px] uppercase tracking-[.3em] shadow-2xl shadow-primary/30 active:scale-95 disabled:opacity-50 transition-all flex items-center space-x-3"
                                 >
                                     {saving ? (
                                         <div className="h-4 w-4 border-3 border-white/20 border-t-white rounded-full animate-spin" />

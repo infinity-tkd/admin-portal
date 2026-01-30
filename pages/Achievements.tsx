@@ -187,7 +187,7 @@ export const Achievements: React.FC = () => {
                 </div>
                 <button
                     onClick={() => { setCurrentAchievement({ date: new Date().toISOString().split('T')[0], medal: 'Gold' }); setIsFormOpen(true); }}
-                    className="bg-primary text-white px-8 py-4 rounded-md font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
+                    className="bg-primary text-white px-8 py-4 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
                 >
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                     <span>Honor Warrior</span>
@@ -256,7 +256,7 @@ export const Achievements: React.FC = () => {
                                         <motion.div
                                             key={eventName}
                                             whileHover={{ y: -4 }}
-                                            className="bg-white rounded-lg border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
+                                            className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
                                         >
                                             <header className="p-4 bg-slate-50 border-b border-slate-100">
                                                 <div className="flex items-center justify-between mb-1">
@@ -268,7 +268,7 @@ export const Achievements: React.FC = () => {
 
                                             <div className="p-4 space-y-3">
                                                 {eventItems.map((item) => (
-                                                    <div key={item.id} className="group/item relative bg-white rounded-md p-3 border border-slate-100 hover:border-yellow-200 hover:shadow-sm transition-all duration-200">
+                                                    <div key={item.id} className="group/item relative bg-white rounded-lg p-3 border border-slate-100 hover:border-yellow-200 hover:shadow-sm transition-all duration-200">
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex items-center space-x-3">
                                                                 <div className={`h-8 w-8 rounded-md flex items-center justify-center shadow-sm transform group-hover/item:rotate-12 transition-transform ${item.medal === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 text-white' :
@@ -325,7 +325,7 @@ export const Achievements: React.FC = () => {
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-2xl lg:rounded-lg shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
+                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
                         >
                             <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 backdrop-blur-xl sticky top-0 z-20">
                                 <div>
@@ -452,7 +452,7 @@ export const Achievements: React.FC = () => {
                                     form="achievement-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-1 bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                    className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing...' : (currentAchievement.id ? 'Save Changes' : 'Confer Honor')}
                                 </button>

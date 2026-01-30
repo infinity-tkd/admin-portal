@@ -25,7 +25,7 @@ export const Payments: React.FC = () => {
         const cy = new Date().getFullYear();
         return cy >= 2025 ? cy.toString() : 'All';
     });
-    const [monthFilter, setMonthFilter] = useState('All');
+    const [monthFilter, setMonthFilter] = useState(MONTHS[new Date().getMonth()]);
     const [saving, setSaving] = useState(false);
 
     // Dynamic Year Roster (2025+)
@@ -42,22 +42,18 @@ export const Payments: React.FC = () => {
         if (!globalPayments) return;
 
         const term = searchTerm.toLowerCase().trim();
-        const filtered = globalPayments.filter(p => {
+
+        // 1. IDENTIFY ALL PAYMENTS FOR SELECTED PERIOD (Ignore Status/Search for now)
+        // We need this "absolute truth" of who paid in this period to correctly determine "Pending".
+        const paymentsInPeriod = globalPayments.filter(p => {
             const py = Number(p.year);
             // Strict check: if year is below 2025 and filter is not 'All', ignore
             if (py < 2025 && yearFilter !== 'All') return false;
-            if (py < 2025 && p.year !== '2025' && p.year !== '2026') return false; // Hide legacy trash
 
-            const matchesSearch = !term ||
-                (p.studentName || '').toLowerCase().includes(term) ||
-                (p.studentId || '').toLowerCase().includes(term);
-
-            const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
             const matchesYear = yearFilter === 'All' || p.year?.toString() === yearFilter;
 
-            // Fuzzy Month Match (Support abbreviations like Jan)
+            // Fuzzy Month Match
             const targetMonth = monthFilter.toLowerCase();
-            // BRIDGE: Handle 'type' if 'forMonth' is missing
             const rawMonth = p.forMonth || (p as any).type || '';
             const recordMonth = rawMonth.toString().toLowerCase().trim();
 
@@ -66,10 +62,75 @@ export const Payments: React.FC = () => {
                 (recordMonth.length >= 3 && targetMonth.startsWith(recordMonth)) ||
                 (targetMonth.length >= 3 && recordMonth.startsWith(targetMonth));
 
-            return matchesSearch && matchesStatus && matchesYear && matchesMonth;
+            return matchesYear && matchesMonth;
         });
-        setFilteredPayments(filtered);
-    }, [searchTerm, statusFilter, yearFilter, monthFilter, globalPayments]);
+
+        // 2. FILTER FOR DISPLAY (Apply Status & Search)
+        let displayList = paymentsInPeriod.filter(p => {
+            const matchesSearch = !term ||
+                (p.studentName || '').toLowerCase().includes(term) ||
+                (p.studentId || '').toLowerCase().includes(term);
+
+            const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+
+            return matchesSearch && matchesStatus;
+        });
+
+        // 3. GENERATE PENDING (MISSING) RECORDS
+        // Only if a specific Month & Year are selected.
+        // 3. GENERATE PENDING (MISSING) RECORDS
+        // Logic: If user specifically asks for "Pending", but has "All" months selected, default to Current Month.
+        // Otherwise, use the selected month.
+        let targetMonthForPending = monthFilter;
+        if (statusFilter === 'Pending' && monthFilter === 'All') {
+            targetMonthForPending = MONTHS[new Date().getMonth()];
+        }
+
+        if (targetMonthForPending !== 'All' && yearFilter !== 'All' && (statusFilter === 'All' || statusFilter === 'Pending')) {
+            // We must identify who paid in the TARGET month (not necessarily the filtered month if it was All)
+            const paymentsInTargetPeriod = globalPayments.filter(p => {
+                const py = Number(p.year);
+                if (py < 2025 && yearFilter !== 'All') return false;
+
+                const matchesYear = yearFilter === 'All' || p.year?.toString() === yearFilter;
+
+                const tMonth = targetMonthForPending.toLowerCase();
+                const rMonth = (p.forMonth || (p as any).type || '').toString().toLowerCase().trim();
+
+                const matchesMonth = rMonth === tMonth ||
+                    (rMonth.length >= 3 && tMonth.startsWith(rMonth)) ||
+                    (tMonth.length >= 3 && rMonth.startsWith(tMonth));
+
+                return matchesYear && matchesMonth;
+            });
+
+            const paidStudentIds = new Set(paymentsInTargetPeriod.map(p => p.studentId));
+
+            const pendingStudents = globalStudents.filter(s => {
+                if (paidStudentIds.has(s.id)) return false;
+                const matchesSearch = !term ||
+                    (s.englishName || '').toLowerCase().includes(term) ||
+                    (s.id || '').toLowerCase().includes(term);
+                return matchesSearch;
+            });
+
+            const pendingRecords: Payment[] = pendingStudents.map(s => ({
+                id: `PENDING-${s.id}-${yearFilter}-${targetMonthForPending}`,
+                studentId: s.id,
+                studentName: s.englishName,
+                amount: 0,
+                date: '-',
+                year: yearFilter,
+                forMonth: targetMonthForPending,
+                status: 'Pending' as any,
+                currency: 'USD'
+            }));
+
+            displayList = [...displayList, ...pendingRecords];
+        }
+
+        setFilteredPayments(displayList);
+    }, [searchTerm, statusFilter, yearFilter, monthFilter, globalPayments, globalStudents]);
 
     const queryClient = useQueryClient();
     const { showToast } = useToast(); // Added useToast hook
@@ -115,7 +176,11 @@ export const Payments: React.FC = () => {
                 return [...list, saved]; // If adding a new payment
             });
 
+            // ACTUAL API CALL
+            await api.savePayment(apiPayload as Payment);
+
             await refreshPayments();
+            setIsModalOpen(false);
             setIsModalOpen(false);
         } catch (error) {
             console.error(error);
@@ -126,8 +191,10 @@ export const Payments: React.FC = () => {
 
     const StatusBadge = ({ status }: { status: string }) => {
         const isPaid = status === 'Paid';
+        const isPending = status === 'Pending';
         return (
-            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${isPaid ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
+            <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${isPaid ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                isPending ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-red-50 text-red-600 border-red-100'
                 }`}>
                 {status}
             </span>
@@ -151,7 +218,7 @@ export const Payments: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="lg:col-span-2 bg-primary rounded-md p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[180px] sm:min-h-[220px]"
+                    className="lg:col-span-2 bg-primary rounded-xl p-6 sm:p-8 text-white relative overflow-hidden flex flex-col justify-between min-h-[180px] sm:min-h-[220px] shadow-lg shadow-primary/20"
                 >
                     <div className="absolute top-0 right-0 w-64 h-64 bg-accent/20 blur-[80px] -mr-32 -mt-32" />
                     <div className="relative z-10">
@@ -178,7 +245,7 @@ export const Payments: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="bg-white border border-slate-200 rounded-md p-6 sm:p-8 flex flex-col justify-between shadow-sm"
+                    className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col justify-between shadow-sm"
                 >
                     <div className="space-y-3">
                         <div className="h-11 w-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-black shadow-inner">
@@ -196,7 +263,7 @@ export const Payments: React.FC = () => {
                             });
                             setIsModalOpen(true);
                         }}
-                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-md font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 active:scale-95 transition-all mt-3 sm:mt-5"
+                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 active:scale-95 transition-all mt-3 sm:mt-5"
                     >
                         Create Transaction
                     </button>
@@ -209,14 +276,14 @@ export const Payments: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Student name or ID..."
-                        className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-md focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm"
+                        className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                     <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 transition-colors group-focus-within:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
 
-                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
+                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
                     {years.map(y => (
                         <button
                             key={y}
@@ -229,7 +296,7 @@ export const Payments: React.FC = () => {
                 </div>
 
                 <select
-                    className="px-4 py-2 bg-white border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-xs appearance-none cursor-pointer"
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-xs appearance-none cursor-pointer"
                     value={monthFilter}
                     onChange={(e) => setMonthFilter(e.target.value)}
                 >
@@ -237,8 +304,8 @@ export const Payments: React.FC = () => {
                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
 
-                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
-                    {['All', 'Paid', 'Unpaid'].map(s => (
+                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
+                    {['All', 'Paid', 'Unpaid', 'Pending'].map(s => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
@@ -251,7 +318,7 @@ export const Payments: React.FC = () => {
             </div>
 
             {/* TRANSACTION LIST */}
-            <div className="bg-white rounded-md border border-slate-200 shadow-sm overflow-x-auto flex flex-col">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
                 <div className="min-w-[800px] lg:min-w-0">
                     <table className="w-full text-left border-collapse">
                         <thead>
@@ -283,7 +350,23 @@ export const Payments: React.FC = () => {
                                         transition={{ delay: i * 0.03 }}
                                         key={p.id}
                                         className="group hover:bg-slate-50/50 transition-all duration-300 cursor-pointer"
-                                        onClick={() => { setCurrentPayment(p); setIsModalOpen(true); }}
+                                        onClick={() => {
+                                            if (p.status === 'Pending') {
+                                                // Pre-fill for new payment
+                                                setCurrentPayment({
+                                                    studentId: p.studentId,
+                                                    studentName: displayName,
+                                                    year: yearFilter !== 'All' ? yearFilter : new Date().getFullYear().toString(),
+                                                    forMonth: monthFilter !== 'All' ? monthFilter : MONTHS[new Date().getMonth()],
+                                                    status: 'Paid',
+                                                    date: new Date().toISOString().split('T')[0]
+                                                });
+                                                setIsModalOpen(true);
+                                            } else {
+                                                setCurrentPayment(p);
+                                                setIsModalOpen(true);
+                                            }
+                                        }}
                                     >
                                         <td className="px-5 sm:px-6 py-4">
                                             <div className="flex flex-col">
@@ -366,7 +449,7 @@ export const Payments: React.FC = () => {
                                     <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Warrior Entity</label>
                                     <select
                                         required
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 appearance-none"
+                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 appearance-none"
                                         value={currentPayment.studentId || ''}
                                         onChange={e => {
                                             const s = globalStudents.find(st => st.id === e.target.value);
@@ -384,7 +467,7 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">For Month</label>
                                         <select
                                             required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 appearance-none text-base"
                                             value={currentPayment.forMonth || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, forMonth: e.target.value })}
                                         >
@@ -396,7 +479,7 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Year</label>
                                         <input
                                             type="number" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-black text-slate-900 text-sm"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-black text-slate-900 text-base"
                                             value={currentPayment.year || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, year: e.target.value })}
                                         />
@@ -408,7 +491,7 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Amount ($)</label>
                                         <input
                                             type="number" step="0.01" min="0" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-slate-900 text-lg text-center"
+                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-slate-900 text-lg text-center"
                                             value={currentPayment.amount || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, amount: Math.max(0, parseFloat(e.target.value)) })}
                                         />
@@ -417,14 +500,14 @@ export const Payments: React.FC = () => {
                                         <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Payment Date</label>
                                         <input
                                             type="date" required
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm"
+                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm"
                                             value={currentPayment.date || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, date: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex bg-slate-100/50 p-1 rounded-md border border-slate-200">
+                                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
                                     {['Paid', 'Unpaid'].map(s => (
                                         <button
                                             key={s}
@@ -443,7 +526,7 @@ export const Payments: React.FC = () => {
                                     form="payment-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="w-full bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                    className="w-full bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing Txn...' : 'Lock Transaction'}
                                 </button>

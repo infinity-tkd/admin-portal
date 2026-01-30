@@ -11,14 +11,25 @@ import { Attendance } from './pages/Attendance';
 import { Payments } from './pages/Payments';
 import { Events } from './pages/Events';
 import { Achievements } from './pages/Achievements';
+import { Settings } from './pages/Settings';
 
-const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+interface PrivateRouteProps {
+    children: React.ReactNode;
+    roles?: string[];
+}
+
+const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, roles }) => {
     const { user, isLoading: authLoading } = useAuth();
     const { loading: dataLoading } = useData();
 
     if (authLoading) return null; // Wait for auth check
 
     if (!user) return <Navigate to="/login" replace />;
+
+    // ROLE CHECK
+    if (roles && roles.length > 0 && user.role && !roles.includes(user.role)) {
+        return <Navigate to="/" replace />;
+    }
 
     // BLOCKING DATA LOADER
     if (dataLoading) {
@@ -92,8 +103,14 @@ const AppRoutes: React.FC = () => {
             } />
 
             <Route path="/payments" element={
-                <PrivateRoute>
+                <PrivateRoute roles={['admin']}>
                     <Payments />
+                </PrivateRoute>
+            } />
+
+            <Route path="/settings" element={
+                <PrivateRoute roles={['admin']}>
+                    <Settings />
                 </PrivateRoute>
             } />
 

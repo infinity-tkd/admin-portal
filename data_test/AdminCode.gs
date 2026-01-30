@@ -96,6 +96,22 @@ var AdminBackend = {
         case 'adminDeleteAchievement':
            result = this.deleteAchievement(token, data.id);
            break;
+
+        // USER MANAGEMENT (TEAM)
+        case 'adminGetUsers':
+           result = this.getUsers(token);
+           break;
+        case 'adminSaveUser':
+           result = this.saveUser(token, data);
+           break;
+        case 'adminDeleteUser':
+           result = this.deleteUser(token, data.username);
+           break;
+
+        // STUDENT ACCESS
+        case 'adminGetStudentLogins':
+           result = this.getStudentLogins(token);
+           break;
            
         default:
            throw new Error("Unknown Admin Action: " + action);
@@ -159,31 +175,55 @@ var AdminBackend = {
       const row = data.find(r => r[0] == username && r[1] == password); // 0=User, 1=Pass
       
       if (!row) throw new Error("Invalid Credentials");
+
+      // Normalize Role: "Admin" -> "admin", "Coach" -> "coach"
+      let role = (row[3] || "assistant_coach").toLowerCase();
+      if (role.indexOf("assistant") === -1 && role.indexOf("coach") !== -1) role = "coach";
+      else if (role.indexOf("admin") !== -1) role = "admin";
+      else role = "assistant_coach";
       
-      const user = { username: row[0], displayName: row[2], role: row[3], avatarUrl: row[4] };
+      const user = { username: row[0], displayName: row[2], role: role, avatarUrl: row[4] };
       const token = this.Security.createSession(user);
       
       return { user, token };
   },
 
   getInitialData: function(token) {
-      // Basic role check - allow any authorized user to get base data, 
-      // but specific sensitive data might be filtered inside the sub-getters if needed.
-      // For now, assuming authorized users can read basic lists.
-      this.Security.validateToken(token); 
+      const user = this.Security.validateToken(token); 
       
       const students = this.getStudents(token);
       const attendance = this.getAttendance(token);
-      const payments = this.getPayments(token);
       const events = this.getEvents(token);
       const achievements = this.getAchievements(token);
+      
+      // Safely try to get payments. If forbidden (Coach), return empty array.
+      let payments = [];
+      try {
+         payments = this.getPayments(token);
+      } catch (e) {}
+
+      // ADMIN ONLY DATA
+      let users = [];
+      let studentLogins = [];
+      
+      if (user.role.toUpperCase().includes('ADMIN')) {
+          try {
+              users = this.getUsers(token);
+              studentLogins = this.getStudentLogins(token);
+          } catch (e) {
+              // Should not happen if role check passes, but safety first
+          }
+      }
       
       return {
           students: students,
           attendance: attendance,
           payments: payments,
           events: events,
-          achievements: achievements
+          achievements: achievements,
+          // New Data
+          users: users,
+          studentLogins: studentLogins
       };
   },
 
@@ -544,5 +584,106 @@ var AdminBackend = {
           sampleRow: allData[1] || [],
           numRows: allData.length
       };
+  },
+
+  // --- USER MANAGEMENT ---
+
+  getUsers: function(token) {
+      this.Security.checkRole(token, 'ADMIN');
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Login_admin");
+      if (!sheet) return [];
+      
+      const data = sheet.getDataRange().getDisplayValues().slice(1);
+      return data.map(r => ({
+          username: r[0],
+          // password: r[1],
+          displayName: r[2],
+          role: r[3],
+          avatarUrl: r[4]
+      }));
+  },
+
+  saveUser: function(token, u) {
+      this.Security.checkRole(token, 'ADMIN');
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Login_admin");
+      if (!sheet) throw new Error("Login_admin sheet missing");
+      
+      const data = sheet.getDataRange().getValues();
+      let rowIndex = -1;
+      
+      for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(u.username)) {
+              rowIndex = i + 1;
+              break;
+          }
+      }
+      
+      // Columns: Username(0), Password(1), DisplayName(2), Role(3), Avatar(4)
+      if (rowIndex > -1) {
+          // Update
+          const currentRow = data[rowIndex-1];
+          const newPass = u.password ? u.password : currentRow[1]; // Keep old if empty
+          
+          sheet.getRange(rowIndex, 1, 1, 5).setValues([[
+              u.username,
+              newPass,
+              u.displayName,
+              u.role,
+              u.avatarUrl
+          ]]);
+      } else {
+          // Insert
+          if (!u.password) throw new Error("Password required for new user");
+          sheet.appendRow([
+              u.username,
+              u.password,
+              u.displayName,
+              u.role,
+              u.avatarUrl
+          ]);
+      }
+      return { ...u, password: "***" };
+  },
+
+  deleteUser: function(token, username) {
+      this.Security.checkRole(token, 'ADMIN');
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Login_admin");
+      const data = sheet.getDataRange().getValues();
+      
+      for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]) === String(username)) {
+              sheet.deleteRow(i + 1);
+              return true;
+          }
+      }
+      return false;
+  },
+
+  getStudentLogins: function(token) {
+      this.Security.checkRole(token, 'ADMIN');
+      
+      // 1. Get All Students
+      const studentSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Students");
+      const studentsData = studentSheet ? studentSheet.getDataRange().getDisplayValues().slice(1) : [];
+      
+      // 2. Get All Logins
+      const loginSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Login");
+      const loginData = loginSheet ? loginSheet.getDataRange().getDisplayValues().slice(1) : [];
+      
+      // Map Logins: ID -> boolean
+      const loginMap = {};
+      loginData.forEach(r => {
+          if(r[0]) loginMap[String(r[0]).trim()] = !!r[1];
+      });
+
+      // 3. Merge
+      return studentsData.map(r => {
+          const sid = String(r[0]).trim();
+          return {
+              studentId: sid,
+              name: r[2], // English Name
+              hasPassword: !!loginMap[sid]
+          };
+      });
   }
 };

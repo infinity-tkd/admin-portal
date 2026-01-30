@@ -216,7 +216,7 @@ export const Events: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-3">
                     {/* FILTERS */}
-                    <div className="flex items-center space-x-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
+                    <div className="flex items-center space-x-2 bg-white p-1.5 rounded-lg border border-slate-200 shadow-sm">
                         <select
                             value={filterYear}
                             onChange={(e) => setFilterYear(e.target.value)}
@@ -249,7 +249,7 @@ export const Events: React.FC = () => {
                             });
                             setIsFormOpen(true);
                         }}
-                        className="bg-primary text-white px-6 py-3.5 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
+                        className="bg-primary text-white px-6 py-3.5 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
                     >
                         <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" /></svg>
                         <span>Add Event</span>
@@ -276,7 +276,7 @@ export const Events: React.FC = () => {
                                 exit={{ opacity: 0, scale: 0.95 }}
                                 transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1], delay: i * 0.05 }}
                                 key={event.id}
-                                className="bg-white rounded-md p-5 md:p-7 border border-slate-200 shadow-sm flex flex-col hover:shadow-xl transition-all duration-500 group relative overflow-hidden"
+                                className="bg-white rounded-xl p-5 md:p-7 border border-slate-200 shadow-sm flex flex-col hover:shadow-xl transition-all duration-500 group relative overflow-hidden"
                             >
                                 <div className="absolute top-0 right-0 w-24 h-24 md:w-32 md:h-32 bg-accent opacity-[0.02] rounded-bl-full group-hover:scale-110 transition-transform duration-700 pointer-events-none" />
 
@@ -424,11 +424,11 @@ export const Events: React.FC = () => {
                                 </div>
 
                                 {/* DATE SECTION */}
-                                <div className="bg-slate-50/50 p-4 rounded-lg border border-slate-100 space-y-4">
+                                <div className="bg-slate-50/50 p-4 rounded-xl border border-slate-100 space-y-4">
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-1">Event Start</label>
-                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-md text-sm font-bold text-slate-700 outline-none focus:border-accent"
+                                            <input type="date" required className="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm font-bold text-slate-700 outline-none focus:border-accent"
                                                 value={currentEvent.eventStart || ''}
                                                 onChange={e => setCurrentEvent({ ...currentEvent, eventStart: e.target.value })} />
                                         </div>
@@ -504,7 +504,7 @@ export const Events: React.FC = () => {
                                     form="event-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-1 bg-primary text-white py-4 rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                    className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing...' : (currentEvent.id ? 'Save Changes' : 'Create Event')}
                                 </button>
@@ -513,7 +513,7 @@ export const Events: React.FC = () => {
                                     <button
                                         type="button"
                                         onClick={() => { setIsFormOpen(false); confirmDelete(currentEvent.id!); }}
-                                        className="px-6 py-4 rounded-md bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
+                                        className="px-6 py-4 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 font-bold transition-colors"
                                     >
                                         <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                                     </button>

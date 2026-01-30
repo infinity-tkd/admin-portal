@@ -107,7 +107,7 @@ export const Attendance: React.FC = () => {
 
     return (
         <div className="space-y-8 pb-32">
-            <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 bg-white p-8 rounded-lg border border-slate-100 shadow-sm">
+            <header className="flex flex-col xl:flex-row xl:items-end justify-between gap-6 bg-white p-6 sm:p-8 rounded-lg border border-slate-100 shadow-sm">
                 <div className="space-y-4">
                     <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em]">Chronos Control</p>
                     <div className="relative group">
@@ -119,7 +119,7 @@ export const Attendance: React.FC = () => {
                         />
                         <div className="absolute -bottom-1 left-0 w-0 h-1 bg-primary transition-all group-hover:w-full" />
                     </div>
-                    <div className="flex items-center space-x-6">
+                    <div className="flex flex-wrap gap-4 sm:gap-6">
                         <div className="flex items-center space-x-2">
                             <div className="h-2 w-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50" />
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{stats.present} Present</span>
@@ -139,12 +139,12 @@ export const Attendance: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 w-full xl:w-auto">
                     <div className="relative">
                         <input
                             type="text"
                             placeholder="Find Student..."
-                            className="pl-10 pr-6 py-3 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white outline-none w-64 transition-all"
+                            className="pl-10 pr-6 py-3.5 bg-slate-50 border border-slate-100 rounded-lg text-sm font-bold focus:ring-4 focus:ring-primary/5 focus:bg-white outline-none w-full sm:w-64 transition-all"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -152,14 +152,14 @@ export const Attendance: React.FC = () => {
                     </div>
                     <button
                         onClick={() => setIsConfirmOpen(true)}
-                        className="px-8 py-3.5 bg-slate-900 text-white rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all"
+                        className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all whitespace-nowrap"
                     >
                         Sync Records
                     </button>
                 </div>
             </header>
 
-            <div className="bg-white rounded-lg border border-slate-100 shadow-sm overflow-hidden p-8 space-y-8">
+            <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden p-6 sm:p-8 space-y-8">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div className="flex items-center space-x-2 overflow-x-auto pb-2 scrollbar-none">
                         {belts.map(belt => (
@@ -173,12 +173,12 @@ export const Attendance: React.FC = () => {
                         ))}
                     </div>
 
-                    <div className="flex items-center space-x-2 p-1.5 bg-slate-50 rounded-xl border border-slate-100">
+                    <div className="flex items-center space-x-2 p-1.5 bg-slate-50 rounded-lg border border-slate-100 overflow-x-auto scrollbar-none w-full md:w-auto">
                         {['All', 'Present', 'Late', 'Absent', 'None'].map(s => (
                             <button
                                 key={s}
                                 onClick={() => setStatusFilter(s)}
-                                className={`px-6 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${statusFilter === s ? 'bg-white text-slate-900 shadow-md ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                                className={`px-4 sm:px-6 py-2.5 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all whitespace-nowrap ${statusFilter === s ? 'bg-white text-slate-900 shadow-md ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 {s === 'None' ? 'Pending' : s}
                             </button>
@@ -197,7 +197,7 @@ export const Attendance: React.FC = () => {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     key={s.id}
-                                    className="bg-white p-6 rounded-lg border border-slate-100 shadow-sm hover:border-primary/20 transition-all group"
+                                    className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm hover:border-primary/20 transition-all group"
                                 >
                                     <div className="flex items-center space-x-4 mb-6">
                                         <Avatar profilePictureId={s.profilePictureId} name={s.englishName} size="md" className="ring-4 ring-slate-50 group-hover:ring-primary/10 transition-all" />
@@ -215,7 +215,7 @@ export const Attendance: React.FC = () => {
                                             <button
                                                 key={status.id}
                                                 onClick={() => handleStatusChange(s.id, status.id as any)}
-                                                className={`py-3 rounded-xl text-[8px] font-black uppercase tracking-widest transition-all border ${currentStatus === status.id
+                                                className={`py-3 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all border ${currentStatus === status.id
                                                     ? `bg-${status.color}-500 border-${status.color}-600 text-white shadow-lg shadow-${status.color}-500/30`
                                                     : 'bg-white border-slate-100 text-slate-300 hover:border-slate-200 hover:bg-slate-50'}`}
                                             >
@@ -234,7 +234,7 @@ export const Attendance: React.FC = () => {
                 {isConfirmOpen && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsConfirmOpen(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white p-10 rounded-2xl shadow-2xl max-w-sm w-full text-center space-y-6">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white p-10 rounded-xl shadow-2xl max-w-sm w-full text-center space-y-6">
                             <div className="h-20 w-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto border-4 border-white shadow-xl shadow-emerald-500/10">✨</div>
                             <div className="space-y-2">
                                 <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Records Verified?</h3>
@@ -244,7 +244,7 @@ export const Attendance: React.FC = () => {
                                 <button
                                     onClick={handleConfirmSave}
                                     disabled={saving}
-                                    className="w-full py-4 bg-primary text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/30 active:scale-95 transition-all text-center flex items-center justify-center"
+                                    className="w-full py-4 bg-primary text-white rounded-lg font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/30 active:scale-95 transition-all text-center flex items-center justify-center"
                                 >
                                     {saving ? <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : 'Confirm & Sync'}
                                 </button>

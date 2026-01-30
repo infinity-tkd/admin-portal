@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useQuery, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { api } from '../services/api';
+import { api, AdminUser, StudentLogin } from '../services/api';
 import { useAuth } from './AuthContext';
 import { Student, Attendance, Payment, Event, Achievement } from '../types';
 
@@ -24,6 +24,11 @@ interface DataContextType {
     refreshEvents: () => Promise<void>;
     refreshAchievements: () => Promise<void>;
     refreshAll: () => Promise<void>;
+
+    // New Data
+    users: AdminUser[];
+    studentLogins: StudentLogin[];
+    refreshUsers: () => Promise<void>;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -56,111 +61,69 @@ const DataProviderContent: React.FC<{ children: ReactNode }> = ({ children }) =>
         try { localStorage.setItem(`cache_${key}`, JSON.stringify(data)); } catch (e) { console.warn('Cache full', e); }
     };
 
-    // --- QUERIES ---
-    const studentsQuery = useQuery({
-        queryKey: ['students'],
+    // --- MASTER QUERY ---
+    const masterQuery = useQuery({
+        queryKey: ['masterData'],
         queryFn: async () => {
-            const data = await api.getStudents();
-            saveToStorage('students', data);
+            const data = await api.getInitialData();
+            // Cache individual parts for consistent access if needed later
+            saveToStorage('students', data.students || []);
+            saveToStorage('attendance', data.attendance || []);
+            saveToStorage('payments', data.payments || []);
+            saveToStorage('events', data.events || []);
+            saveToStorage('achievements', data.achievements || []);
+            if (data.users) saveToStorage('users', data.users);
+            if (data.studentLogins) saveToStorage('studentLogins', data.studentLogins);
             return data;
         },
-        initialData: () => loadFromStorage('students', []),
+        initialData: () => ({
+            students: loadFromStorage('students', []),
+            attendance: loadFromStorage('attendance', []),
+            payments: loadFromStorage('payments', []),
+            events: loadFromStorage('events', []),
+            achievements: loadFromStorage('achievements', []),
+            users: loadFromStorage('users', []),
+            studentLogins: loadFromStorage('studentLogins', [])
+        }),
         ...QUERY_OPTIONS
     });
 
-    const attendanceQuery = useQuery({
-        queryKey: ['attendance'],
-        queryFn: async () => {
-            const data = await api.getAttendance();
-            saveToStorage('attendance', data);
-            return data;
-        },
-        initialData: () => loadFromStorage('attendance', []),
-        ...QUERY_OPTIONS
-    });
-
-    const paymentsQuery = useQuery({
-        queryKey: ['payments'],
-        queryFn: async () => {
-            const data = await api.getPayments();
-            saveToStorage('payments', data);
-            return data;
-        },
-        initialData: () => loadFromStorage('payments', []),
-        ...QUERY_OPTIONS
-    });
-
-    const eventsQuery = useQuery({
-        queryKey: ['events'],
-        queryFn: async () => {
-            const data = await api.getEvents();
-            saveToStorage('events', data);
-            return data;
-        },
-        initialData: () => loadFromStorage('events', []),
-        ...QUERY_OPTIONS
-    });
-
-    const achievementsQuery = useQuery({
-        queryKey: ['achievements'],
-        queryFn: async () => {
-            const data = await api.getAchievements();
-            saveToStorage('achievements', data);
-            return data;
-        },
-        initialData: () => loadFromStorage('achievements', []),
-        ...QUERY_OPTIONS
-    });
+    // --- DERIVED STATE ---
+    // We use the master query result for everything now
+    const students = masterQuery.data?.students || [];
+    const attendance = masterQuery.data?.attendance || [];
+    const payments = masterQuery.data?.payments || [];
+    const events = masterQuery.data?.events || [];
+    const achievements = masterQuery.data?.achievements || [];
+    const users = masterQuery.data?.users || [];
+    const studentLogins = masterQuery.data?.studentLogins || [];
 
     // --- AGGREGATED STATES ---
-    // Initial loading is true only if we have NO data from cache AND we are fetching
-    // If we have cache, we are not "loading" in the UI sense (we show cached data)
-    const initialLoading =
-        (studentsQuery.isLoading && !studentsQuery.data.length) ||
-        (attendanceQuery.isLoading && !attendanceQuery.data.length) ||
-        (paymentsQuery.isLoading && !paymentsQuery.data.length) ||
-        (eventsQuery.isLoading && !eventsQuery.data.length) ||
-        (achievementsQuery.isLoading && !achievementsQuery.data.length);
-
-    // Background fetching is true if any query is refetching
-    const isFetching =
-        studentsQuery.isFetching ||
-        attendanceQuery.isFetching ||
-        paymentsQuery.isFetching ||
-        eventsQuery.isFetching ||
-        achievementsQuery.isFetching;
-
-    // Error state if any query fails
-    const isError =
-        studentsQuery.isError ||
-        attendanceQuery.isError ||
-        paymentsQuery.isError ||
-        eventsQuery.isError ||
-        achievementsQuery.isError;
+    const initialLoading = masterQuery.isLoading && !students.length;
+    const isFetching = masterQuery.isFetching;
+    const isError = masterQuery.isError;
 
 
     // --- MANUAL REFRESH WRAPPERS ---
-    const refreshStudents = async () => { await queryClient.invalidateQueries({ queryKey: ['students'] }); };
-    const refreshAttendance = async () => { await queryClient.invalidateQueries({ queryKey: ['attendance'] }); };
-    const refreshPayments = async () => { await queryClient.invalidateQueries({ queryKey: ['payments'] }); };
-    const refreshEvents = async () => { await queryClient.invalidateQueries({ queryKey: ['events'] }); };
-    const refreshAchievements = async () => { await queryClient.invalidateQueries({ queryKey: ['achievements'] }); };
+    // Invalidate everything since it's all one query now
+    const refreshAll = async () => { await queryClient.invalidateQueries({ queryKey: ['masterData'] }); };
 
-    const refreshAll = async () => {
-        await queryClient.invalidateQueries();
-    };
+    // For backward compatibility / specific refresh intent, we just reload the master
+    const refreshStudents = refreshAll;
+    const refreshAttendance = refreshAll;
+    const refreshPayments = refreshAll;
+    const refreshEvents = refreshAll;
+    const refreshAchievements = refreshAll;
+    const refreshUsers = refreshAll;
+
 
     return (
         <DataContext.Provider value={{
-            students: studentsQuery.data,
-            attendance: attendanceQuery.data,
-            payments: paymentsQuery.data,
-            events: eventsQuery.data,
-            achievements: achievementsQuery.data,
+            students, attendance, payments, events, achievements, users, studentLogins,
             loading: initialLoading,
             isFetching,
             isError,
-            refreshStudents, refreshAttendance, refreshPayments, refreshEvents, refreshAchievements, refreshAll
+            refreshStudents, refreshAttendance, refreshPayments, refreshEvents, refreshAchievements, refreshUsers, refreshAll
         }}>
             {children}
         </DataContext.Provider>

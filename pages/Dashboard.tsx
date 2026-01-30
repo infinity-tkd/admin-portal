@@ -34,10 +34,10 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative p-4 sm:p-5 rounded-md bg-white border border-slate-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-500"
+      className="group relative p-5 rounded-xl bg-white border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-500"
     >
       <div className="relative z-10 flex items-center space-x-4">
-        <div className={`h-10 w-10 rounded bg-slate-50 flex items-center justify-center ${color} transition-all duration-500`}>
+        <div className={`h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center ${color} transition-all duration-500 shadow-inner`}>
           {React.cloneElement(icon as React.ReactElement, { className: 'h-5 w-5' })}
         </div>
         <div>
@@ -93,7 +93,7 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="bg-white p-6 rounded-md border border-slate-100 shadow-sm"
+              className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-full"
             >
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Command Center</h3>
@@ -110,7 +110,7 @@ export const Dashboard: React.FC = () => {
                     whileTap={{ scale: 0.98 }}
                     key={i}
                     onClick={() => navigate(action.to)}
-                    className={`group p-4 sm:p-5 rounded border ${action.color} transition-all duration-300 text-left`}
+                    className={`group p-4 sm:p-5 rounded-xl border ${action.color} transition-all duration-300 text-left relative overflow-hidden active:scale-95`}
                   >
                     <div className="text-xl mb-3">{action.icon}</div>
                     <div className="font-black text-[11px] uppercase tracking-widest">{action.label}</div>
@@ -125,7 +125,7 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, x: 10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.6, duration: 0.6 }}
-              className="bg-primary p-6 rounded-md text-white shadow-xl relative overflow-hidden"
+              className="bg-primary p-6 rounded-xl text-white shadow-xl shadow-primary/20 relative overflow-hidden"
             >
               <div className="absolute top-0 right-0 w-32 h-32 bg-accent/20 blur-[60px]" />
               <div className="relative z-10 flex items-center justify-between mb-8">
@@ -157,11 +157,11 @@ export const Dashboard: React.FC = () => {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.7 + i * 0.1 }}
                       key={s.id}
-                      className="flex items-center justify-between p-3 sm:p-3.5 rounded bg-white/5 border border-white/5 hover:bg-white/10 transition-all cursor-pointer group"
+                      className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-white/10 border border-white/5 hover:bg-white/20 transition-all cursor-pointer group active:scale-95"
                       onClick={() => navigate('/students')}
                     >
                       <div className="flex items-center space-x-3">
-                        <div className="h-8 w-8 sm:h-9 sm:w-9 rounded bg-accent text-white flex items-center justify-center font-black text-xs shadow-lg group-hover:rotate-3 transition-transform">
+                        <div className="h-10 w-10 rounded-lg bg-accent text-white flex items-center justify-center font-black text-xs shadow-lg group-hover:rotate-6 transition-transform">
                           {s.englishName.charAt(0)}
                         </div>
                         <div>
@@ -190,7 +190,7 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            className="bg-white p-6 rounded-md border border-slate-100 shadow-sm"
+            className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"
           >
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Notifications</h3>
@@ -205,8 +205,8 @@ export const Dashboard: React.FC = () => {
                 .sort((a, b) => b.timestamp - a.timestamp)
                 .slice(0, 5)
                 .map((activity, i) => (
-                  <div key={i} className="flex items-start space-x-4 p-3 rounded-md hover:bg-slate-50 transition-colors">
-                    <div className={`h-8 w-8 rounded flex items-center justify-center text-sm ${activity.type === 'Payment' ? 'bg-emerald-50 text-emerald-600' : 'bg-blue-50 text-blue-600'}`}>
+                  <div key={i} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                    <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-base shadow-sm ${activity.type === 'Payment' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                       {activity.type === 'Payment' ? '💰' : '📅'}
                     </div>
                     <div className="flex-1">
@@ -231,7 +231,7 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-white p-6 rounded-md border border-slate-100 shadow-sm h-full"
+            className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-full"
           >
             <div className="text-center">
               <div className="h-24 w-24 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg relative">
@@ -246,17 +246,17 @@ export const Dashboard: React.FC = () => {
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">{user?.role?.replace('_', ' ')}</p>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <p className="text-[18px] font-black text-slate-900 leading-none">{students.length}</p>
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Students</p>
                 </div>
-                <div className="p-3 bg-slate-50 rounded border border-slate-100">
+                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
                   <p className="text-[18px] font-black text-slate-900 leading-none">{payments.length}</p>
                   <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Payments</p>
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-primary text-white rounded-md font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 transition-all">
+              <button className="w-full py-3 bg-primary text-white rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 transition-all active:scale-95">
                 Edit Profile
               </button>
             </div>

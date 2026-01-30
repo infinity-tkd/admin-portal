@@ -99,6 +99,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </svg>
       )
     },
+    {
+      path: '/settings', label: 'Settings', icon: (
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      )
+    },
   ];
 
   const secondaryItems = [
@@ -137,8 +145,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         <nav className="flex-1 px-3 space-y-1 overflow-y-auto scrollbar-none">
-          <p className="text-[8px] uppercase font-black text-slate-400 px-4 mb-3 tracking-[0.2em]">Principal</p>
-          {navItems.map((item) => (
+          <p className="text-[8px] uppercase font-black text-slate-400 px-4 mb-3 tracking-[0.2em] opacity-60">Principal</p>
+          {navItems.filter(item => {
+            if ((item.path === '/payments' || item.path === '/settings') && user?.role !== 'admin') return false;
+            return true;
+          }).map((item) => (
             <SidebarItem
               key={item.path}
               to={item.path}
@@ -227,7 +238,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              className="relative bg-white rounded-t-2xl shadow-2xl p-6 pb-[calc(6rem+env(safe-area-inset-bottom))] z-50 border-t border-slate-100 max-h-[85vh] overflow-y-auto"
+              className="relative bg-white rounded-t-xl shadow-2xl p-6 pb-[calc(6rem+env(safe-area-inset-bottom))] z-50 border-t border-slate-100 max-h-[85vh] overflow-y-auto"
             >
               <div className="w-12 h-1 bg-slate-200 rounded-full mx-auto mb-6" />
               <p className="text-[9px] uppercase font-black text-slate-400 mb-4 tracking-[0.2em] px-2">Academy</p>
@@ -262,7 +273,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {/* MOBILE BOTTOM NAV - REFINED & SAFE AREA */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 z-40 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] pb-[env(safe-area-inset-bottom)]">
         <div className="flex items-center justify-around h-16 px-2 w-full max-w-md mx-auto">
-          {navItems.map(item => (
+          {navItems.filter(item => {
+            if ((item.path === '/payments' || item.path === '/settings') && user?.role !== 'admin') return false;
+            return true;
+          }).map(item => (
             <NavIcon
               key={item.path}
               to={item.path}
@@ -355,7 +369,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               initial={{ scale: 0.95, opacity: 0, y: 10 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.95, opacity: 0, y: 10 }}
-              className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center overflow-hidden"
+              className="relative bg-white rounded-xl shadow-2xl p-8 w-full max-w-sm text-center overflow-hidden"
             >
               <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-accent to-accent-light" />
               <div className="h-14 w-14 bg-red-50 rounded-xl flex items-center justify-center mx-auto mb-5 text-red-500 transform rotate-6">
@@ -367,13 +381,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex flex-col space-y-3">
                 <button
                   onClick={logout}
-                  className="w-full py-4 text-white font-black rounded-2xl bg-red-500 hover:bg-red-600 shadow-xl shadow-red-500/20 active:scale-95 transition-all text-sm"
+                  className="w-full py-4 text-white font-black rounded-xl bg-red-500 hover:bg-red-600 shadow-xl shadow-red-500/20 active:scale-95 transition-all text-sm"
                 >
                   Confirm Sign Out
                 </button>
                 <button
                   onClick={() => setIsLogoutModalOpen(false)}
-                  className="w-full py-4 text-slate-500 font-bold rounded-2xl bg-white hover:bg-slate-50 transition-colors text-sm"
+                  className="w-full py-4 text-slate-500 font-bold rounded-xl bg-white hover:bg-slate-50 transition-colors text-sm"
                 >
                   Dismiss
                 </button>
