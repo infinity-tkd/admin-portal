@@ -5,10 +5,15 @@ import { api } from '../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Avatar } from '../components/Avatar';
 import { useQueryClient } from '@tanstack/react-query';
+import { useToast } from '../context/ToastContext';
 
 export const Attendance: React.FC = () => {
     const { students: globalStudents, attendance: globalAttendance, globalLoading, refreshAttendance } = useData();
     const queryClient = useQueryClient();
+    const { showToast } = useToast();
+
+    // No local state for batching anymore - purely optimistic cache updates
+
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedBelt, setSelectedBelt] = useState('All');
@@ -31,16 +36,19 @@ export const Attendance: React.FC = () => {
         }
     };
 
+    // Use Global Cache Only (Optimistically Updated by handleStatusChange)
     const attendanceData = useMemo(() => {
         const map: { [studentId: string]: 'Present' | 'Late' | 'Absent' | 'None' } = {};
         const targetDate = normalizeDate(selectedDate);
 
+        // 1. Load Server Data
         (globalAttendance || []).forEach(record => {
             const recordDate = normalizeDate(record.date);
             if (recordDate === targetDate) {
                 map[record.studentId] = record.status as any;
             }
         });
+
         return map;
     }, [globalAttendance, selectedDate]);
 
@@ -64,6 +72,7 @@ export const Attendance: React.FC = () => {
         };
     }, [attendanceData, globalStudents.length]);
 
+    // OPTIMIZED: Instant Optimistic Update + Background Save
     const handleStatusChange = async (studentId: string, status: 'Present' | 'Late' | 'Absent') => {
         const currentStatus = attendanceData[studentId];
         if (currentStatus === status) return;
@@ -73,31 +82,42 @@ export const Attendance: React.FC = () => {
             studentName: globalStudents.find(s => s.id === studentId)?.englishName || '',
             date: selectedDate,
             status,
-            classId: 'N/A', // or whatever default
+            classId: 'N/A',
             id: `${studentId}-${selectedDate}`
         };
 
+        // 1. Optimistic Update (Instant Feedback)
+        // We update the cache immediately so the user sees the change with 0 latency.
         queryClient.setQueryData(['attendance'], (old: AttendanceType[] | undefined) => {
             const current = old || [];
             const filtered = current.filter(a => !(normalizeDate(a.date) === normalizeDate(selectedDate) && a.studentId === studentId));
             return [...filtered, record];
         });
 
-        try {
-            await api.saveAttendanceBatch([record]);
-        } catch (error) {
-            console.error("Save failed:", error);
-            refreshAttendance();
-        }
+        // 2. Fire-and-Forget API Call (Background)
+        // We do NOT await this to block the UI. We catch errors to revert if needed.
+        api.saveAttendanceBatch([record])
+            .then(() => {
+                // Success - simplified (no toast needed for every click to keep it "quiet")
+                // We rely on the optimistic update.
+            })
+            .catch((error) => {
+                console.error("Save failed:", error);
+                showToast("Failed to save attendance. Please check your connection.", "error");
+                refreshAttendance(); // Revert/Sync on error
+            });
     };
 
+    // Manual Sync Button Handler
     const handleConfirmSave = async () => {
         setSaving(true);
         try {
             await refreshAttendance();
             setIsConfirmOpen(false);
+            showToast("Records synced with cloud.", "success");
         } catch (error) {
-            console.error("Save failed:", error);
+            console.error("Sync failed:", error);
+            showToast("Sync failed.", "error");
         } finally {
             setSaving(false);
         }
@@ -152,7 +172,7 @@ export const Attendance: React.FC = () => {
                     </div>
                     <button
                         onClick={() => setIsConfirmOpen(true)}
-                        className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all whitespace-nowrap"
+                        className="w-full sm:w-auto px-8 py-3.5 bg-slate-900 text-white rounded-xl font-black text-[10px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/20 active:scale-95 transition-all whitespace-nowrap hover:bg-slate-800"
                     >
                         Sync Records
                     </button>
@@ -235,20 +255,20 @@ export const Attendance: React.FC = () => {
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsConfirmOpen(false)} />
                         <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white p-10 rounded-xl shadow-2xl max-w-sm w-full text-center space-y-6">
-                            <div className="h-20 w-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center text-3xl mx-auto border-4 border-white shadow-xl shadow-emerald-500/10">✨</div>
+                            <div className="h-20 w-20 bg-slate-50 text-slate-500 rounded-full flex items-center justify-center text-3xl mx-auto border-4 border-white shadow-xl shadow-slate-500/10">🔄</div>
                             <div className="space-y-2">
-                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Records Verified?</h3>
-                                <p className="text-sm text-slate-400 font-bold px-4">All attendance markers for {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} will be synced to cloud.</p>
+                                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Sync Records?</h3>
+                                <p className="text-sm text-slate-400 font-bold px-4">This will force a clean sync with the cloud database for {new Date(selectedDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}.</p>
                             </div>
                             <div className="flex flex-col space-y-2 pt-4">
                                 <button
                                     onClick={handleConfirmSave}
                                     disabled={saving}
-                                    className="w-full py-4 bg-primary text-white rounded-lg font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/30 active:scale-95 transition-all text-center flex items-center justify-center"
+                                    className="w-full py-4 bg-slate-900 text-white rounded-lg font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-slate-900/30 active:scale-95 transition-all text-center flex items-center justify-center"
                                 >
                                     {saving ? <div className="h-4 w-4 border-2 border-white/20 border-t-white rounded-full animate-spin" /> : 'Confirm & Sync'}
                                 </button>
-                                <button onClick={() => setIsConfirmOpen(false)} className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] hover:text-slate-600 transition-colors">Go Back</button>
+                                <button onClick={() => setIsConfirmOpen(false)} className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-[0.3em] hover:text-slate-600 transition-colors">Cancel</button>
                             </div>
                         </motion.div>
                     </div>
