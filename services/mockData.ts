@@ -19,13 +19,13 @@ export const MOCK_ATTENDANCE: Attendance[] = [
 ];
 
 export const MOCK_PAYMENTS: Payment[] = [
-  { id: 'PAY-001', studentId: 'STU-F-003', studentName: 'Oeng Chamroeunreasey', amount: 30, currency: 'USD', date: '2025-05-01', type: 'Tuition', status: 'Paid' },
-  { id: 'PAY-002', studentId: 'STU-F-004', studentName: 'Sothea Mith', amount: 30, currency: 'USD', date: '2025-05-02', type: 'Tuition', status: 'Unpaid' },
+  { id: 'PAY-001', studentId: 'STU-F-003', studentName: 'Oeng Chamroeunreasey', amount: 30, currency: 'USD', date: '2025-05-01', year: '2025', forMonth: 'May', status: 'Paid' },
+  { id: 'PAY-002', studentId: 'STU-F-004', studentName: 'Sothea Mith', amount: 30, currency: 'USD', date: '2025-05-02', year: '2025', forMonth: 'May', status: 'Unpaid' },
 ];
 
 export const MOCK_EVENTS: Event[] = [
-  { id: 'EVT-001', title: 'Belt Testing - Q2', date: '2025-06-15', location: 'Main Dojang', description: 'Quarterly belt testing for eligible students.' },
-  { id: 'EVT-002', title: 'National Championship', date: '2025-07-20', location: 'Olympic Stadium', description: 'National level competition.' },
+  { id: 'EVT-001', title: 'Belt Testing - Q2', eventStart: '2025-06-15', eventClose: '2025-06-15', type: 'Testing', regStart: '2025-05-01', regClose: '2025-06-01', status: 'Open', location: 'Main Dojang', description: 'Quarterly belt testing for eligible students.' },
+  { id: 'EVT-002', title: 'National Championship', eventStart: '2025-07-20', eventClose: '2025-07-22', type: 'Tournament', regStart: '2025-06-01', regClose: '2025-07-01', status: 'Upcoming', location: 'Olympic Stadium', description: 'National level competition.' },
 ];
 
 export const MOCK_ACHIEVEMENTS: Achievement[] = [

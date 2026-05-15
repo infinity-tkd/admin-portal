@@ -26,11 +26,12 @@ export const Avatar: React.FC<AvatarProps> = ({ profilePictureId, name, size = '
     return n.trim().split(' ').map(i => i[0]).slice(0, 2).join('').toUpperCase();
   };
 
+  // Brand-aligned gradients — red-based variations
   const gradients = [
-    'from-indigo-400 to-violet-500',
-    'from-emerald-400 to-teal-500',
-    'from-orange-400 to-rose-500',
-    'from-blue-400 to-cyan-500'
+    'from-red-400 to-red-600',
+    'from-red-500 to-rose-700',
+    'from-neutral-600 to-neutral-800',
+    'from-red-300 to-red-500'
   ];
 
   // Deterministic gradient based on name
@@ -42,7 +43,7 @@ export const Avatar: React.FC<AvatarProps> = ({ profilePictureId, name, size = '
       <img
         src={`https://drive.google.com/thumbnail?id=${profilePictureId}&sz=s700`}
         alt={name}
-        className={`rounded-full object-cover border-2 border-white ring-1 ring-slate-100 ${sizeClasses[size]} ${className}`}
+        className={`rounded-full object-cover border-2 border-white ring-1 ring-neutral-200 ${sizeClasses[size]} ${className}`}
         onError={() => setError(true)}
       />
     );

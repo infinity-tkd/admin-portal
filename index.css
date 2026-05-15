@@ -1,0 +1,64 @@
+/* ===== INFINITY TKD ADMIN PORTAL — BRAND STYLES ===== */
+
+* {
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+/* Prevent pull-to-refresh on mobile */
+body {
+  overscroll-behavior-y: none;
+}
+
+/* ===== SCROLLBAR — LIGHT MODE ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a3a3a3;
+}
+
+/* ===== SCROLLBAR — DARK MODE ===== */
+.dark ::-webkit-scrollbar-thumb {
+  background: #333333;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* ===== SELECTION ===== */
+::selection {
+  background: #EF2F38;
+  color: white;
+}
+
+/* ===== SCROLLBAR UTILITY CLASSES ===== */
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #d4d4d4;
+  border-radius: 2px;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #333333;
+}

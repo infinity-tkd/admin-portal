@@ -38,23 +38,68 @@ export const Students: React.FC = () => {
         });
     }, [searchTerm, selectedBelt, showReadyForTest, globalStudents]);
 
+    // Track original state to calculate diffs
+    const [originalStudent, setOriginalStudent] = useState<Partial<Student>>({});
+
+    // When opening modal, update original state
+    useEffect(() => {
+        if (isEditModalOpen && currentStudent.id) {
+            setOriginalStudent(JSON.parse(JSON.stringify(currentStudent)));
+        }
+    }, [isEditModalOpen, currentStudent.id]); // Only runs when modal opens/changes student
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault();
         setSaving(true);
+
+        const isNewStudent = !currentStudent.id || String(currentStudent.id).includes('NEW');
+        const s = currentStudent as Student;
+
         // Optimistic Update
-        queryClient.setQueryData(['students'], (old: Student[] | undefined) => {
-            const list = old || [];
-            const s = currentStudent as Student;
-            if (s.id && !String(s.id).includes('NEW')) {
-                return list.map(item => item.id === s.id ? s : item);
+        queryClient.setQueryData(['masterData'], (old: any) => {
+            const list = old?.students || [];
+            let newList = [];
+            if (!isNewStudent) {
+                newList = list.map((item: any) => item.id === s.id ? s : item);
+            } else {
+                newList = [...list, { ...s, id: 'temp-' + Date.now() }];
             }
-            return [...list, { ...s, id: 'temp-' + Date.now() }];
+            return { ...old, students: newList };
         });
 
         try {
-            await api.saveStudent(currentStudent as Student);
+            if (isNewStudent) {
+                // Full Save for New Students
+                await api.saveStudent(s);
+            } else {
+                // PATCH for Existing Students
+                const updates: Partial<Student> = {};
+                let hasChanges = false;
+
+                (Object.keys(currentStudent) as Array<keyof Student>).forEach(key => {
+                    const originalVal = originalStudent[key];
+                    const currentVal = currentStudent[key];
+
+                    // Simple equality check (works for primitives in Student type)
+                    if (originalVal !== currentVal) {
+                        // Special handling for numeric/boolean consistency if needed, 
+                        // but JS loose equality usually suffices for string/number forms coming from inputs
+                        // Explicitly assigning to updates
+                        // @ts-ignore
+                        updates[key] = currentVal;
+                        hasChanges = true;
+                    }
+                });
+
+                if (hasChanges) {
+                    await api.patchStudent(s.id, updates);
+                } else {
+                    console.log("No changes detected, skipping save.");
+                }
+            }
+
             await refreshStudents();
-            showToast("Student profile updated successfully.", "success");
+            showToast("Student updated successfully.", "success");
             setIsEditModalOpen(false);
             setIsDetailOpen(true);
         } catch (error) {
@@ -69,13 +114,13 @@ export const Students: React.FC = () => {
 
     const BeltBadge = React.memo(({ belt }: { belt: string }) => {
         const b = (belt || '').toLowerCase();
-        let colors = "bg-slate-100 text-slate-500 border-slate-200";
-        if (b.includes('black')) colors = "bg-slate-900 text-white border-slate-700 shadow-lg shadow-black/10";
+        let colors = "bg-neutral-100 dark:bg-white/5 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-white/10";
+        if (b.includes('black')) colors = "bg-black text-white border-neutral-700 shadow-lg shadow-black/10";
         else if (b.includes('red')) colors = "bg-red-500 text-white border-red-400 shadow-lg shadow-red-500/10";
         else if (b.includes('brown')) colors = "bg-amber-800 text-white border-amber-700 shadow-lg shadow-amber-800/10";
         else if (b.includes('blue')) colors = "bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/10";
         else if (b.includes('green')) colors = "bg-emerald-500 text-white border-emerald-400 shadow-lg shadow-emerald-500/10";
-        else if (b.includes('yellow')) colors = "bg-yellow-400 text-slate-900 border-yellow-300 shadow-lg shadow-yellow-400/10";
+        else if (b.includes('yellow')) colors = "bg-yellow-400 text-black dark:text-white border-yellow-300 shadow-lg shadow-yellow-400/10";
 
         return (
             <span className={`px-4 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest border transition-all ${colors}`}>
@@ -91,8 +136,8 @@ export const Students: React.FC = () => {
                 <div className="absolute inset-0 flex items-center justify-center font-black text-accent text-lg">∞</div>
             </div>
             <div className="text-center">
-                <p className="font-display font-black text-slate-900 text-xl tracking-tight uppercase">Syncing Roster</p>
-                <p className="text-slate-400 text-[10px] font-bold uppercase tracking-[.2em] mt-2">Connecting to Cloud Dojang</p>
+                <p className="font-display font-black text-black dark:text-white text-xl tracking-tight uppercase">Syncing Roster</p>
+                <p className="text-neutral-400 dark:text-neutral-500 text-[10px] font-bold uppercase tracking-[.2em] mt-2">Connecting to Cloud Dojang</p>
             </div>
         </div>
     );
@@ -100,40 +145,62 @@ export const Students: React.FC = () => {
     return (
         <div className="space-y-10 pb-32">
             <section className="space-y-8">
-                <div className="max-w-3xl">
-                    <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-3 ml-1">Warrior Search</p>
-                    <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none transition-transform group-focus-within:scale-110">
-                            <svg className="h-5 w-5 text-slate-400 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div className="flex-1 w-full md:max-w-2xl">
+                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.4em] mb-3 ml-1">Warrior Search</p>
+                        <div className="relative group">
+                            <div className="absolute inset-y-0 left-0 pl-6 flex items-center pointer-events-none transition-transform group-focus-within:scale-110">
+                                <svg className="h-5 w-5 text-neutral-400 dark:text-neutral-500 group-focus-within:text-primary transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                            <input
+                                type="text"
+                                placeholder="Search by Name, ID or Khmer Name..."
+                                className="block w-full pl-12 sm:pl-14 pr-6 sm:pr-8 py-4 sm:py-5 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg sm:rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-bold text-black dark:text-white placeholder:text-neutral-300 shadow-sm text-base"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
                         </div>
-                        <input
-                            type="text"
-                            placeholder="Search by Name, ID or Khmer Name..."
-                            className="block w-full pl-12 sm:pl-14 pr-6 sm:pr-8 py-4 sm:py-5 bg-white border border-slate-200 rounded-lg sm:rounded-xl focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 shadow-sm text-base"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
                     </div>
+                    <button
+                        onClick={() => {
+                            setCurrentStudent({
+                                id: `NEW-${Date.now()}`,
+                                englishName: '',
+                                khmerName: '',
+                                currentBelt: 'White',
+                                monthsAtBelt: 0,
+                                stripes: 0,
+                                gender: 'Male',
+                                height: 0,
+                                weight: 0
+                            });
+                            setIsEditModalOpen(true);
+                            setIsDetailOpen(false);
+                        }}
+                        className="w-full md:w-auto px-8 py-5 bg-primary text-white rounded-xl font-black text-[11px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 active:scale-95 transition-all hover:bg-black"
+                    >
+                        + Enlist Warrior
+                    </button>
                 </div>
 
                 <div className="space-y-4">
                     <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center space-x-3">
-                            <div className="h-[1px] w-8 bg-slate-200" />
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Filter by Rank</p>
+                            <div className="h-[1px] w-8 bg-neutral-200" />
+                            <p className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.4em]">Filter by Rank</p>
                         </div>
 
                         <button
                             onClick={() => setShowReadyForTest(!showReadyForTest)}
-                            className={`flex items-center space-x-2 px-4 py-1.5 rounded-full border transition-all ${showReadyForTest ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'}`}
+                            className={`flex items-center space-x-2 px-4 py-1.5 rounded-full border transition-all ${showReadyForTest ? 'bg-emerald-500 border-emerald-600 text-white shadow-lg shadow-emerald-500/30' : 'bg-white dark:bg-[#0A0A0A] border-neutral-200 dark:border-white/10 text-neutral-400 dark:text-neutral-500 hover:border-neutral-300'}`}
                         >
-                            <div className={`h-2 w-2 rounded-full ${showReadyForTest ? 'bg-white animate-pulse' : 'bg-slate-300'}`} />
+                            <div className={`h-2 w-2 rounded-full ${showReadyForTest ? 'bg-white dark:bg-[#0A0A0A] animate-pulse' : 'bg-neutral-300'}`} />
                             <span className="text-[9px] font-black uppercase tracking-widest">{showReadyForTest ? 'Ready Only' : 'Show Ready'}</span>
                         </button>
                     </div>
-                    <div className="flex items-center space-x-2 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-200 scrollbar-track-transparent">
+                    <div className="flex items-center space-x-2 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-neutral-200 scrollbar-track-transparent">
                         {belts.map((belt, i) => (
                             <motion.button
                                 whileTap={{ scale: 0.95 }}
@@ -144,7 +211,7 @@ export const Students: React.FC = () => {
                                 onClick={() => setSelectedBelt(belt)}
                                 className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap border-2 ${selectedBelt === belt
                                     ? 'bg-primary border-primary text-white shadow-xl shadow-primary/30 scale-105'
-                                    : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300 hover:text-slate-600'
+                                    : 'bg-white dark:bg-[#0A0A0A] border-neutral-100 dark:border-white/10 text-neutral-400 dark:text-neutral-500 hover:border-neutral-300 hover:text-neutral-600 dark:text-neutral-300'
                                     }`}
                             >
                                 {belt}
@@ -155,37 +222,36 @@ export const Students: React.FC = () => {
             </section>
 
             <div className="relative">
-                <div className="hidden md:block bg-white rounded-lg border border-slate-200 shadow-sm overflow-x-auto">
+                <div className="hidden md:block bg-white dark:bg-[#0A0A0A] rounded-lg border border-neutral-200 dark:border-white/10 shadow-sm overflow-x-auto">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50/50 border-b border-slate-100 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
-                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 w-1/3">Identity</th>
-                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">Rank</th>
-                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-center">Badges</th>
-                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Action</th>
+                            <tr className="bg-neutral-50/50 dark:bg-black/50 border-b border-neutral-100 dark:border-white/10 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 w-1/3">Identity</th>
+                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Rank</th>
+                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 text-center">Badges</th>
+                                <th className="px-8 py-5 text-[9px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-neutral-50">
                             {filteredStudents.map((s) => (
                                 <motion.tr
-                                    layout
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
                                     transition={{ duration: 0.2 }}
                                     key={s.id}
-                                    className="group hover:bg-slate-50/80 transition-all duration-300 cursor-pointer"
+                                    className="group hover:bg-neutral-50/80 dark:bg-black/80 transition-all duration-300 cursor-pointer"
                                     onClick={() => { setCurrentStudent(s); setIsDetailOpen(true); }}
                                 >
                                     <td className="px-8 py-5">
                                         <div className="flex items-center space-x-5">
                                             <div className="relative">
-                                                <Avatar profilePictureId={s.profilePictureId} name={s.englishName} size="md" className="ring-4 ring-slate-100/50" />
-                                                <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm ${s.eligibleForTest ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                                <Avatar profilePictureId={s.profilePictureId} name={s.englishName} size="md" className="ring-4 ring-neutral-100/50" />
+                                                <div className={`absolute -bottom-1 -right-1 h-3.5 w-3.5 rounded-full border-2 border-white shadow-sm ${s.eligibleForTest ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
                                             </div>
                                             <div>
-                                                <p className="text-base font-black text-slate-900 leading-none group-hover:text-primary transition-colors">{s.englishName}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase mt-2 tracking-wide font-display">{s.khmerName}</p>
+                                                <p className="text-base font-black text-black dark:text-white leading-none group-hover:text-primary transition-colors">{s.englishName}</p>
+                                                <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase mt-2 tracking-wide font-display">{s.khmerName}</p>
                                             </div>
                                         </div>
                                     </td>
@@ -207,7 +273,7 @@ export const Students: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-5 text-right">
-                                        <button className="h-9 w-9 rounded-md bg-slate-50 text-slate-300 group-hover:bg-primary group-hover:text-white transition-all duration-300 flex items-center justify-center ml-auto">
+                                        <button className="h-9 w-9 rounded-md bg-neutral-50 dark:bg-black/50 text-neutral-300 group-hover:bg-primary group-hover:text-white transition-all duration-300 flex items-center justify-center ml-auto">
                                             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
                                         </button>
                                     </td>
@@ -220,22 +286,21 @@ export const Students: React.FC = () => {
                 <div className="md:hidden space-y-4">
                     {filteredStudents.map((s) => (
                         <motion.div
-                            layout
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             exit={{ opacity: 0, scale: 0.95 }}
                             transition={{ duration: 0.2 }}
                             key={s.id}
                             onClick={() => { setCurrentStudent(s); setIsDetailOpen(true); }}
-                            className="bg-white p-4 sm:p-5 rounded-xl border border-slate-100 shadow-sm active:scale-[0.98] transition-all flex items-center space-x-3 sm:space-x-4 group"
+                            className="bg-white dark:bg-[#0A0A0A] p-4 sm:p-5 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm active:scale-[0.98] transition-all flex items-center space-x-3 sm:space-x-4 group"
                         >
                             <div className="relative">
                                 <Avatar profilePictureId={s.profilePictureId} name={s.englishName} size="md" />
-                                <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${s.eligibleForTest ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                                <div className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${s.eligibleForTest ? 'bg-emerald-500' : 'bg-neutral-300'}`} />
                             </div>
                             <div className="flex-1 min-w-0">
-                                <h4 className="font-black font-display text-slate-900 text-sm leading-tight truncate">{s.englishName}</h4>
-                                <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-wider truncate">{s.khmerName}</p>
+                                <h4 className="font-black font-display text-black dark:text-white text-sm leading-tight truncate">{s.englishName}</h4>
+                                <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 mt-1 uppercase tracking-wider truncate">{s.khmerName}</p>
                             </div>
                             <div className="flex flex-col items-end space-y-2">
                                 <BeltBadge belt={s.currentBelt} />
@@ -256,7 +321,7 @@ export const Students: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-950/40 backdrop-blur-md"
+                            className="absolute inset-0 bg-black/40 backdrop-blur-md"
                             onClick={() => setIsDetailOpen(false)}
                         />
                         <motion.div
@@ -264,28 +329,28 @@ export const Students: React.FC = () => {
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
                             transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] lg:max-h-[90vh] overflow-hidden flex flex-col mt-auto lg:mt-0"
+                            className="relative bg-white dark:bg-[#0A0A0A] rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-4xl max-h-[95vh] lg:max-h-[90vh] overflow-hidden flex flex-col mt-auto lg:mt-0"
                         >
-                            <header className="px-5 py-5 md:px-10 md:py-8 border-b border-slate-100 flex items-center justify-between bg-white relative z-10 pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-8">
+                            <header className="px-5 py-5 md:px-10 md:py-8 border-b border-neutral-100 dark:border-white/10 flex items-center justify-between bg-white dark:bg-[#0A0A0A] relative z-10 pt-[calc(1rem+env(safe-area-inset-top))] lg:pt-8">
                                 <div className="flex items-center space-x-4 md:space-x-6">
                                     <div className="relative">
-                                        <Avatar profilePictureId={currentStudent.profilePictureId} name={currentStudent.englishName || ''} size="lg" className="ring-[6px] ring-slate-50 shadow-inner" />
+                                        <Avatar profilePictureId={currentStudent.profilePictureId} name={currentStudent.englishName || ''} size="lg" className="ring-[6px] ring-neutral-50 shadow-inner" />
                                         <motion.div
                                             initial={{ scale: 0 }}
                                             animate={{ scale: 1 }}
-                                            className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-white shadow-sm ${currentStudent.eligibleForTest ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                                            className={`absolute -bottom-1 -right-1 h-5 w-5 rounded-full border-4 border-white shadow-sm ${currentStudent.eligibleForTest ? 'bg-emerald-500' : 'bg-neutral-300'}`}
                                         />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl md:text-2xl font-black font-display text-slate-900 tracking-tight leading-none uppercase">{currentStudent.englishName}</h3>
+                                        <h3 className="text-xl md:text-2xl font-black font-display text-black dark:text-white tracking-tight leading-none uppercase">{currentStudent.englishName}</h3>
                                         <div className="flex items-center space-x-2 mt-2.5">
                                             <span className="text-[10px] font-black text-primary bg-primary/5 px-2 py-0.5 rounded uppercase tracking-widest">ID: {currentStudent.id}</span>
-                                            <span className="h-1 w-1 rounded-full bg-slate-200" />
-                                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{currentStudent.currentBelt} Rank</span>
+                                            <span className="h-1 w-1 rounded-full bg-neutral-200" />
+                                            <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{currentStudent.currentBelt} Rank</span>
                                         </div>
                                     </div>
                                 </div>
-                                <button onClick={() => setIsDetailOpen(false)} className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-slate-50 text-slate-300 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all group active:scale-95">
+                                <button onClick={() => setIsDetailOpen(false)} className="h-10 w-10 md:h-12 md:w-12 rounded-xl bg-neutral-50 dark:bg-black/50 text-neutral-300 flex items-center justify-center hover:bg-black hover:text-white transition-all group active:scale-95">
                                     <svg className="h-5 w-5 md:h-6 md:w-6 transform group-hover:rotate-90 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </header>
@@ -297,9 +362,9 @@ export const Students: React.FC = () => {
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-3">
                                                     <div className="h-8 w-1 bg-primary rounded-full" />
-                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-900">Personal Profile</h4>
+                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-black dark:text-white">Personal Profile</h4>
                                                 </div>
-                                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Read Only</span>
+                                                <span className="text-[9px] font-black text-neutral-300 uppercase tracking-widest">Read Only</span>
                                             </div>
                                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                                 {[
@@ -310,12 +375,12 @@ export const Students: React.FC = () => {
                                                     { label: 'Primary Phone', value: currentStudent.phone || '—', icon: '📱' },
                                                     { label: 'Email Address', value: currentStudent.email || '—', icon: '📧' },
                                                 ].map((info) => (
-                                                    <div key={info.label} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm hover:border-primary/20 transition-colors group">
+                                                    <div key={info.label} className="bg-white dark:bg-[#0A0A0A] p-5 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm hover:border-primary/20 transition-colors group">
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{info.label}</p>
+                                                            <p className="text-[8px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{info.label}</p>
                                                             <span className="text-xs opacity-40 group-hover:opacity-100 transition-opacity">{info.icon}</span>
                                                         </div>
-                                                        <p className={`text-sm font-black text-slate-900 leading-tight ${info.font || ''}`}>{info.value}</p>
+                                                        <p className={`text-sm font-black text-black dark:text-white leading-tight ${info.font || ''}`}>{info.value}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -324,8 +389,8 @@ export const Students: React.FC = () => {
                                         <section className="space-y-6">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="h-8 w-1 bg-blue-500 rounded-full" />
-                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-900">Biometrics</h4>
+                                                    <div className="h-8 w-1 bg-accent rounded-full" />
+                                                    <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-black dark:text-white">Biometrics</h4>
                                                 </div>
                                             </div>
                                             <div className="grid grid-cols-2 gap-4">
@@ -333,12 +398,12 @@ export const Students: React.FC = () => {
                                                     { label: 'Height', value: currentStudent.height ? `${Number(currentStudent.height).toFixed(2)} cm` : '—', icon: '📏' },
                                                     { label: 'Weight', value: currentStudent.weight ? `${Number(currentStudent.weight).toFixed(2)} kg` : '—', icon: '⚖️' },
                                                 ].map((bio) => (
-                                                    <div key={bio.label} className="bg-blue-50/30 p-5 rounded-xl border border-blue-50/50 shadow-sm transition-colors group">
+                                                    <div key={bio.label} className="bg-neutral-50/30 dark:bg-white/5 p-5 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm transition-colors group">
                                                         <div className="flex items-center justify-between mb-2">
-                                                            <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">{bio.label}</p>
+                                                            <p className="text-[8px] font-black text-neutral-500 dark:text-neutral-400 uppercase tracking-widest">{bio.label}</p>
                                                             <span className="text-xs opacity-40 group-hover:opacity-100 transition-opacity">{bio.icon}</span>
                                                         </div>
-                                                        <p className="text-sm font-black text-slate-900 leading-none">{bio.value}</p>
+                                                        <p className="text-sm font-black text-black dark:text-white leading-none">{bio.value}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -347,22 +412,22 @@ export const Students: React.FC = () => {
                                         <section className="space-y-6">
                                             <div className="flex items-center space-x-3">
                                                 <div className="h-8 w-1 bg-amber-500 rounded-full" />
-                                                <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-slate-900">Martial Journey</h4>
+                                                <h4 className="text-[11px] font-black uppercase tracking-[0.4em] text-black dark:text-white">Martial Journey</h4>
                                             </div>
-                                            <div className="bg-slate-900 rounded-2xl p-8 text-white relative overflow-hidden group">
-                                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-bl-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-700" />
+                                            <div className="bg-black rounded-2xl p-8 text-white relative overflow-hidden group">
+                                                <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 dark:bg-[#0A0A0A]/5 rounded-bl-full -mr-10 -mt-10 group-hover:scale-110 transition-transform duration-700" />
                                                 <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
                                                     <div className="space-y-4">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Current Rank</p>
+                                                        <p className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.3em]">Current Rank</p>
                                                         <BeltBadge belt={currentStudent.currentBelt || ''} />
                                                     </div>
                                                     <div className="space-y-4">
-                                                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.3em]">Stripes / Level</p>
+                                                        <p className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.3em]">Stripes / Level</p>
                                                         <div className="flex items-center space-x-2">
                                                             {[1, 2, 3, 4].map((s) => (
                                                                 <div
                                                                     key={s}
-                                                                    className={`h-8 w-8 rounded-md flex items-center justify-center text-[10px] font-black transition-all ${currentStudent.stripes === s ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white/10 text-slate-500'}`}
+                                                                    className={`h-8 w-8 rounded-md flex items-center justify-center text-[10px] font-black transition-all ${currentStudent.stripes === s ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/30' : 'bg-white/10 dark:bg-[#0A0A0A]/10 text-neutral-500 dark:text-neutral-400'}`}
                                                                 >
                                                                     {s}
                                                                 </div>
@@ -376,15 +441,15 @@ export const Students: React.FC = () => {
 
                                     {/* RIGHT COLUMN: ACTION & HISTORY */}
                                     <div className="space-y-8 md:space-y-12">
-                                        <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center space-y-4">
-                                            <div className="h-16 w-16 bg-white rounded-full flex items-center justify-center shadow-sm text-2xl">✏️</div>
+                                        <div className="bg-neutral-50 dark:bg-black/50 p-6 rounded-2xl border border-neutral-100 dark:border-white/10 flex flex-col items-center justify-center text-center space-y-4">
+                                            <div className="h-16 w-16 bg-white dark:bg-[#0A0A0A] rounded-full flex items-center justify-center shadow-sm text-2xl">✏️</div>
                                             <div>
-                                                <h4 className="text-sm font-black text-slate-900">Edit Profile</h4>
-                                                <p className="text-[10px] font-medium text-slate-400 max-w-[200px] mt-1">Update rank, biometrics, or documentation.</p>
+                                                <h4 className="text-sm font-black text-black dark:text-white">Edit Profile</h4>
+                                                <p className="text-[10px] font-medium text-neutral-400 dark:text-neutral-500 max-w-[200px] mt-1">Update rank, biometrics, or documentation.</p>
                                             </div>
                                             <button
                                                 onClick={() => { setIsDetailOpen(false); setIsEditModalOpen(true); }}
-                                                className="w-full py-4 bg-slate-900 text-white rounded-lg font-black text-[10px] uppercase tracking-[.25em] hover:bg-slate-800 transition-colors shadow-lg shadow-slate-900/20 active:scale-95"
+                                                className="w-full py-4 bg-black text-white rounded-lg font-black text-[10px] uppercase tracking-[.25em] hover:bg-neutral-800 transition-colors shadow-lg shadow-black/20 active:scale-95"
                                             >
                                                 Edit Student
                                             </button>
@@ -393,10 +458,10 @@ export const Students: React.FC = () => {
                                         {currentStudent.eSignId && (
                                             <div className="space-y-4">
                                                 <div className="flex items-center space-x-3">
-                                                    <div className="h-6 w-1 bg-slate-200 rounded-full" />
-                                                    <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-400">E-Sign Photo</h4>
+                                                    <div className="h-6 w-1 bg-neutral-200 rounded-full" />
+                                                    <h4 className="text-[9px] font-black uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-500">E-Sign Photo</h4>
                                                 </div>
-                                                <div className="p-4 bg-white rounded-2xl border border-slate-100 flex items-center justify-center overflow-hidden min-h-[120px]">
+                                                <div className="p-4 bg-white dark:bg-[#0A0A0A] rounded-2xl border border-neutral-100 dark:border-white/10 flex items-center justify-center overflow-hidden min-h-[120px]">
                                                     <img
                                                         src={`https://drive.google.com/thumbnail?id=${currentStudent.eSignId}&sz=s600`}
                                                         alt="e-sign"
@@ -421,7 +486,7 @@ export const Students: React.FC = () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
                             onClick={() => setIsEditModalOpen(false)}
                         />
                         <motion.div
@@ -429,93 +494,93 @@ export const Students: React.FC = () => {
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.95, opacity: 0, y: 40 }}
                             transition={{ type: "spring", stiffness: 350, damping: 30 }}
-                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] lg:max-h-[90vh] overflow-hidden flex flex-col mt-auto lg:mt-0"
+                            className="relative bg-white dark:bg-[#0A0A0A] rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-2xl max-h-[95vh] lg:max-h-[90vh] overflow-hidden flex flex-col mt-auto lg:mt-0"
                         >
-                            <header className="px-5 py-5 md:px-8 md:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 backdrop-blur-xl sticky top-0 z-10">
+                            <header className="px-5 py-5 md:px-8 md:py-6 flex items-center justify-between border-b border-neutral-100 dark:border-white/10 bg-neutral-50/50 dark:bg-black/50 backdrop-blur-xl sticky top-0 z-10">
                                 <div>
                                     <p className="text-[9px] uppercase font-black text-accent tracking-[.2em] mb-1 leading-none">Student Profile</p>
-                                    <h3 className="text-xl font-black font-display text-slate-900 tracking-tight leading-none">
+                                    <h3 className="text-xl font-black font-display text-black dark:text-white tracking-tight leading-none">
                                         {currentStudent.englishName} ({currentStudent.khmerName})
                                     </h3>
                                 </div>
-                                <button onClick={() => setIsEditModalOpen(false)} className="h-9 w-9 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all duration-300">
+                                <button onClick={() => setIsEditModalOpen(false)} className="h-9 w-9 rounded-full bg-white dark:bg-[#0A0A0A] border border-neutral-100 dark:border-white/10 text-neutral-300 flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300">
                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </header>
 
-                            <div className="flex-1 overflow-y-auto bg-white p-5 md:p-8 pb-24 lg:pb-8 space-y-8">
+                            <div className="flex-1 overflow-y-auto bg-white dark:bg-[#0A0A0A] p-5 md:p-8 pb-24 lg:pb-8 space-y-8">
                                 {/* RANK & PROGRESS SECTION */}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                     <div className="space-y-6">
                                         <div className="flex items-center space-x-4">
-                                            <div className="h-12 w-12 bg-blue-50 rounded-xl flex items-center justify-center text-2xl shadow-sm">🥋</div>
+                                            <div className="h-12 w-12 bg-neutral-50 dark:bg-white/5 rounded-xl flex items-center justify-center text-2xl shadow-sm">🥋</div>
                                             <div>
-                                                <p className="text-sm font-black text-slate-900 leading-none">Rank & Progress</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1.5 tracking-wider">Belt Status</p>
+                                                <p className="text-sm font-black text-black dark:text-white leading-none">Rank & Progress</p>
+                                                <p className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 uppercase mt-1.5 tracking-wider">Belt Status</p>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="col-span-2 md:col-span-1 space-y-2">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Current Belt</label>
-                                                <div className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-black text-slate-800">
+                                                <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Current Belt</label>
+                                                <div className="w-full px-5 py-4 bg-neutral-50 dark:bg-black/50 border border-neutral-100 dark:border-white/10 rounded-xl text-sm font-black text-neutral-800 dark:text-neutral-200">
                                                     {currentStudent.currentBelt}
                                                 </div>
                                             </div>
                                             <div className="col-span-2 md:col-span-1 space-y-2">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Time at Rank</label>
-                                                <div className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl flex items-baseline space-x-2">
-                                                    <span className="text-xl font-black text-slate-900">{currentStudent.monthsAtBelt || 0}</span>
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase">Months</span>
+                                                <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Time at Rank</label>
+                                                <div className="w-full px-5 py-4 bg-neutral-50 dark:bg-black/50 border border-neutral-100 dark:border-white/10 rounded-xl flex items-baseline space-x-2">
+                                                    <span className="text-xl font-black text-black dark:text-white">{currentStudent.monthsAtBelt || 0}</span>
+                                                    <span className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase">Months</span>
                                                 </div>
                                             </div>
                                         </div>
 
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Instructor Notes</label>
-                                            <div className="w-full px-5 py-4 bg-slate-50 border border-slate-100 rounded-xl text-sm font-medium text-slate-600 min-h-[80px]">
+                                            <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Instructor Notes</label>
+                                            <div className="w-full px-5 py-4 bg-neutral-50 dark:bg-black/50 border border-neutral-100 dark:border-white/10 rounded-xl text-sm font-medium text-neutral-600 dark:text-neutral-300 min-h-[80px]">
                                                 {currentStudent.instructorNotes || 'No notes available.'}
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* BIOMETRICS SECTION */}
-                                    <div className="bg-blue-50/40 p-8 rounded-2xl border border-blue-100/50 space-y-8 flex flex-col">
+                                    <div className="bg-neutral-50/40 dark:bg-white/5 p-8 rounded-2xl border border-neutral-100 dark:border-white/10 space-y-8 flex flex-col">
                                         <div className="flex items-center space-x-4">
-                                            <div className="h-12 w-12 bg-white rounded-xl flex items-center justify-center text-xl shadow-sm border border-blue-50">📏</div>
+                                            <div className="h-12 w-12 bg-white dark:bg-[#0A0A0A] rounded-xl flex items-center justify-center text-xl shadow-sm border border-neutral-100 dark:border-white/10">📏</div>
                                             <div>
-                                                <p className="text-sm font-black text-slate-900 leading-none">Biometrics</p>
-                                                <p className="text-[9px] font-bold text-slate-400 uppercase mt-1.5 tracking-wider">Growth Tracking</p>
+                                                <p className="text-sm font-black text-black dark:text-white leading-none">Biometrics</p>
+                                                <p className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 uppercase mt-1.5 tracking-wider">Growth Tracking</p>
                                             </div>
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-5 flex-1 items-start">
                                             <div className="space-y-2.5">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Height</label>
+                                                <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Height</label>
                                                 <div className="relative group">
                                                     <input
                                                         type="number"
                                                         placeholder="0"
                                                         min="0"
-                                                        className="w-full pl-5 pr-12 py-4 bg-white border border-blue-100/80 rounded-xl outline-none focus:border-blue-400 focus:ring-8 focus:ring-blue-500/5 transition-all text-xl font-black text-slate-700"
+                                                        className="w-full pl-5 pr-12 py-4 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-xl outline-none focus:border-accent focus:ring-8 focus:ring-accent/5 transition-all text-xl font-black text-neutral-700 dark:text-neutral-300"
                                                         value={currentStudent.height || ''}
                                                         onChange={(e) => setCurrentStudent({ ...currentStudent, height: Math.max(0, parseFloat(e.target.value)) })}
                                                     />
-                                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-300">CM</span>
+                                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-300">CM</span>
                                                 </div>
                                             </div>
                                             <div className="space-y-2.5">
-                                                <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Weight</label>
+                                                <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Weight</label>
                                                 <div className="relative group">
                                                     <input
                                                         type="number"
                                                         placeholder="0"
                                                         min="0"
-                                                        className="w-full pl-5 pr-12 py-4 bg-white border border-blue-100/80 rounded-xl outline-none focus:border-blue-400 focus:ring-8 focus:ring-blue-500/5 transition-all text-xl font-black text-slate-700"
+                                                        className="w-full pl-5 pr-12 py-4 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-xl outline-none focus:border-accent focus:ring-8 focus:ring-accent/5 transition-all text-xl font-black text-neutral-700 dark:text-neutral-300"
                                                         value={currentStudent.weight || ''}
                                                         onChange={(e) => setCurrentStudent({ ...currentStudent, weight: Math.max(0, parseFloat(e.target.value)) })}
                                                     />
-                                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-blue-300">KG</span>
+                                                    <span className="absolute right-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-neutral-300">KG</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -523,25 +588,25 @@ export const Students: React.FC = () => {
                                 </div>
 
                                 {/* DOCUMENTATION SECTION */}
-                                <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100 space-y-4">
+                                <div className="p-6 bg-neutral-50/50 dark:bg-black/50 rounded-2xl border border-neutral-100 dark:border-white/10 space-y-4">
                                     <div className="flex items-center space-x-3 mb-2">
-                                        <div className="h-8 w-1 bg-slate-200 rounded-full" />
-                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Documentation</h4>
+                                        <div className="h-8 w-1 bg-neutral-200 rounded-full" />
+                                        <h4 className="text-[10px] font-black uppercase tracking-[0.3em] text-neutral-400 dark:text-neutral-500">Documentation</h4>
                                     </div>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">Photo ID ID</label>
+                                            <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">Photo ID ID</label>
                                             <input
-                                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-lg outline-none font-mono text-base text-slate-600 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                                                className="w-full px-5 py-4 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-mono text-base text-neutral-600 dark:text-neutral-300 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
                                                 value={currentStudent.profilePictureId || ''}
                                                 onChange={(e) => setCurrentStudent({ ...currentStudent, profilePictureId: e.target.value })}
                                                 placeholder="Paste Google Drive File ID"
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[9px] font-black uppercase text-slate-400 tracking-widest ml-1">E-Sign ID</label>
+                                            <label className="text-[9px] font-black uppercase text-neutral-400 dark:text-neutral-500 tracking-widest ml-1">E-Sign ID</label>
                                             <input
-                                                className="w-full px-5 py-4 bg-white border border-slate-200 rounded-lg outline-none font-mono text-base text-slate-600 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
+                                                className="w-full px-5 py-4 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-mono text-base text-neutral-600 dark:text-neutral-300 focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all"
                                                 value={currentStudent.eSignId || ''}
                                                 onChange={(e) => setCurrentStudent({ ...currentStudent, eSignId: e.target.value })}
                                                 placeholder="Paste Google Drive File ID"
@@ -549,9 +614,9 @@ export const Students: React.FC = () => {
                                         </div>
                                     </div>
                                     {currentStudent.eSignId && (
-                                        <div className="pt-2 border-t border-slate-100 mt-2">
-                                            <p className="text-[9px] font-bold text-slate-400 uppercase mb-2">Signature Preview</p>
-                                            <div className="p-4 bg-white rounded-lg border border-slate-200 inline-block">
+                                        <div className="pt-2 border-t border-neutral-100 dark:border-white/10 mt-2">
+                                            <p className="text-[9px] font-bold text-neutral-400 dark:text-neutral-500 uppercase mb-2">Signature Preview</p>
+                                            <div className="p-4 bg-white dark:bg-[#0A0A0A] rounded-lg border border-neutral-200 dark:border-white/10 inline-block">
                                                 <img
                                                     src={`https://drive.google.com/thumbnail?id=${currentStudent.eSignId}&sz=s400`}
                                                     alt="e-sign"
@@ -563,10 +628,10 @@ export const Students: React.FC = () => {
                                 </div>
                             </div>
 
-                            <footer className="px-10 py-8 bg-white border-t border-slate-100 flex items-center justify-end space-x-6 sticky bottom-0 z-20 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8 backdrop-blur-xl bg-white/90">
+                            <footer className="px-10 py-8 bg-white dark:bg-[#0A0A0A] border-t border-neutral-100 dark:border-white/10 flex items-center justify-end space-x-6 sticky bottom-0 z-20 pb-[calc(2rem+env(safe-area-inset-bottom))] lg:pb-8 backdrop-blur-xl bg-white/90 dark:bg-[#0A0A0A]/90">
                                 <button
                                     onClick={() => { setIsEditModalOpen(false); setIsDetailOpen(true); }}
-                                    className="px-8 py-4 text-[11px] font-black uppercase tracking-[.25em] text-slate-400 hover:text-slate-600 transition-colors"
+                                    className="px-8 py-4 text-[11px] font-black uppercase tracking-[.25em] text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:text-neutral-300 transition-colors"
                                 >
                                     Cancel Changes
                                 </button>

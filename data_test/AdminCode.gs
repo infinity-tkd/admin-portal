@@ -49,6 +49,9 @@ var AdminBackend = {
         case 'adminSaveStudent':
            result = this.saveStudent(token, data);
            break;
+        case 'adminPatchStudent':
+           result = this.patchStudent(token, data.id, data.updates);
+           break;
         case 'adminUpdateStudentPassword':
            result = this.updateStudentPassword(token, data.studentId, data.newPassword);
            break;
@@ -283,6 +286,58 @@ var AdminBackend = {
       else sheet.getRange(rowIndex, 1, 1, rowData.length).setValues([rowData]);
       
       return { ...s, id: newId };
+  },
+
+  patchStudent: function(token, id, updates) {
+      this.Security.checkRole(token, 'COACH');
+      const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Students");
+      if (!sheet) throw new Error("Students sheet not found");
+
+      const data = sheet.getDataRange().getValues();
+      let rowIndex = -1;
+
+      // Find Row
+      for (let i = 1; i < data.length; i++) {
+          if (String(data[i][0]).trim() === String(id).trim()) {
+              rowIndex = i + 1;
+              break;
+          }
+      }
+
+      if (rowIndex === -1) throw new Error("Student not found for patching");
+
+      // Column Map (1-indexed for getRange)
+      const colMap = {
+          'khmerName': 2,
+          'englishName': 3,
+          'gender': 4,
+          'currentBelt': 5,
+          'monthsAtBelt': 6,
+          'eligibleForTest': 7,
+          'dob': 8,
+          'email': 9,
+          'phone': 10,
+          'registrationDate': 11,
+          'scholarship': 12,
+          'scholarshipType': 13,
+          'profilePictureId': 14,
+          'eSignId': 15,
+          'height': 16,
+          'weight': 17
+      };
+
+      Object.keys(updates).forEach(key => {
+          const col = colMap[key];
+          if (col) {
+              let val = updates[key];
+              if (key === 'eligibleForTest') val = val ? 'TRUE' : 'FALSE';
+              if (key === 'scholarship') val = val ? 'YES' : 'NO';
+              
+              sheet.getRange(rowIndex, col).setValue(val);
+          }
+      });
+      
+      return { id: id, patched: true };
   },
   
   updateStudentPassword: function(token, id, pass) {

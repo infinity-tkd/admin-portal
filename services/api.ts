@@ -166,6 +166,11 @@ class ApiService {
     return student;
   }
 
+  async patchStudent(id: string, updates: Partial<Student>): Promise<void> {
+    if (!USE_MOCK) return this.callApi('adminPatchStudent', { id, updates });
+    await new Promise(r => setTimeout(r, 500));
+  }
+
 
 
   async deleteStudent(id: string): Promise<void> {

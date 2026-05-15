@@ -102,12 +102,16 @@ export const Achievements: React.FC = () => {
         };
 
         // Optimistic Update
-        queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => {
-            const list = old || [];
-            if (currentAchievement.id) {
-                return list.map(a => a.id === currentAchievement.id ? achievementToSave : a);
+        queryClient.setQueryData(['masterData'], (old: any) => {
+            const list = old?.achievements || [];
+            let newList = [];
+            const isEditing = !!currentAchievement.id;
+            if (isEditing) {
+                newList = list.map((item: any) => item.id === achievementToSave.id ? achievementToSave : item);
+            } else {
+                newList = [...list, { ...achievementToSave, id: 'temp-' + Date.now() }];
             }
-            return [achievementToSave, ...list];
+            return { ...old, achievements: newList };
         });
 
         try {
@@ -133,7 +137,9 @@ export const Achievements: React.FC = () => {
         if (!deleteId) return;
         setSaving(true);
         // Optimistic Delete
-        queryClient.setQueryData(['achievements'], (old: Achievement[] | undefined) => (old || []).filter(a => a.id !== deleteId));
+        queryClient.setQueryData(['masterData'], (old: any) => {
+            return { ...old, achievements: (old?.achievements || []).filter((a: any) => a.id !== deleteId) };
+        });
 
         try {
             await api.deleteAchievement(deleteId);
@@ -172,8 +178,8 @@ export const Achievements: React.FC = () => {
 
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
-            <div className="h-12 w-12 border-[5px] border-yellow-200 border-t-yellow-600 rounded-full animate-spin" />
-            <p className="font-display font-black text-slate-400 uppercase tracking-widest text-[10px]">Polishing Trophies</p>
+            <div className="h-12 w-12 border-[5px] border-accent/20 border-t-accent rounded-full animate-spin" />
+            <p className="font-display font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest text-[10px]">Polishing Trophies</p>
         </div>
     );
 
@@ -182,12 +188,12 @@ export const Achievements: React.FC = () => {
             {/* HALL OF FAME HERO */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-5">
                 <div>
-                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-yellow-600 mb-1">Legendary Registry</p>
-                    <h2 className="text-3xl font-black font-display text-slate-900 tracking-tight leading-tight">Hall of <br />Excellence</h2>
+                    <p className="text-[9px] font-black uppercase tracking-[0.4em] text-accent mb-1">Legendary Registry</p>
+                    <h2 className="text-3xl font-black font-display text-black dark:text-white tracking-tight leading-tight">Hall of <br />Excellence</h2>
                 </div>
                 <button
                     onClick={() => { setCurrentAchievement({ date: new Date().toISOString().split('T')[0], medal: 'Gold' }); setIsFormOpen(true); }}
-                    className="bg-primary text-white px-8 py-4 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:bg-slate-900 transition-all flex items-center space-x-2.5 active:scale-95"
+                    className="bg-primary text-white px-8 py-4 rounded-lg font-black text-[9px] uppercase tracking-[0.2em] shadow-xl shadow-primary/20 hover:bg-black transition-all flex items-center space-x-2.5 active:scale-95"
                 >
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" /></svg>
                     <span>Honor Warrior</span>
@@ -200,25 +206,25 @@ export const Achievements: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Search events or champions..."
-                        className="w-full pl-11 pr-5 py-3.5 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm h-full"
+                        className="w-full pl-11 pr-5 py-3.5 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white placeholder:text-neutral-300 text-sm h-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 transition-colors group-focus-within:text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-300 transition-colors group-focus-within:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
 
                 <div className="relative w-full sm:w-64">
                     <select
                         value={selectedStudentFilter}
                         onChange={(e) => setSelectedStudentFilter(e.target.value)}
-                        className="w-full pl-5 pr-10 py-3.5 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 text-sm h-full appearance-none cursor-pointer"
+                        className="w-full pl-5 pr-10 py-3.5 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white text-sm h-full appearance-none cursor-pointer"
                     >
                         <option value="">All Warriors</option>
                         {globalStudents.map(s => (
                             <option key={s.id} value={s.id}>{s.englishName}</option>
                         ))}
                     </select>
-                    <svg className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
+                    <svg className="absolute right-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400 dark:text-neutral-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M19 9l-7 7-7-7" /></svg>
                 </div>
             </div>
 
@@ -227,7 +233,7 @@ export const Achievements: React.FC = () => {
                 <AnimatePresence mode="popLayout">
                     {groupedData.length === 0 ? (
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center justify-center py-20 grayscale opacity-40">
-                            <svg className="h-16 w-16 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
+                            <svg className="h-16 w-16 text-neutral-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.989-2.386l-.548-.547z" /></svg>
                             <p className="font-display font-black uppercase tracking-widest text-xs">No histories found</p>
                         </motion.div>
                     ) : groupedData.map((group, groupIdx) => (
@@ -239,12 +245,12 @@ export const Achievements: React.FC = () => {
                             className="space-y-4"
                         >
                             <div className="flex items-center space-x-5">
-                                <Avatar profilePictureId={group.student?.profilePictureId} name={group.student?.englishName || 'Warrior'} size="lg" className="ring-4 ring-slate-100/50 shadow-sm" />
+                                <Avatar profilePictureId={group.student?.profilePictureId} name={group.student?.englishName || 'Warrior'} size="lg" className="ring-4 ring-neutral-100/50 shadow-sm" />
                                 <div>
-                                    <h3 className="text-xl font-black font-display text-slate-900 tracking-tight leading-none uppercase">{group.student?.englishName || 'Unknown Student'}</h3>
+                                    <h3 className="text-xl font-black font-display text-black dark:text-white tracking-tight leading-none uppercase">{group.student?.englishName || 'Unknown Student'}</h3>
                                     <div className="flex items-center space-x-2 mt-2">
-                                        <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded text-[9px] font-black tracking-widest">{group.student?.id}</span>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-display">{group.student?.khmerName || 'កីឡាករ'}</p>
+                                        <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-white/5 text-neutral-500 dark:text-neutral-400 rounded text-[9px] font-black tracking-widest">{group.student?.id}</span>
+                                        <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest font-display">{group.student?.khmerName || 'កីឡាករ'}</p>
                                     </div>
                                 </div>
                             </div>
@@ -256,25 +262,25 @@ export const Achievements: React.FC = () => {
                                         <motion.div
                                             key={eventName}
                                             whileHover={{ y: -4 }}
-                                            className="bg-white rounded-xl border border-slate-200 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
+                                            className="bg-white dark:bg-[#0A0A0A] rounded-xl border border-neutral-200 dark:border-white/10 shadow-[0_2px_10px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_10px_25px_-5px_rgba(0,0,0,0.1)] transition-all duration-300 overflow-hidden flex flex-col group/card"
                                         >
-                                            <header className="p-4 bg-slate-50 border-b border-slate-100">
+                                            <header className="p-4 bg-neutral-50 dark:bg-black/50 border-b border-neutral-100 dark:border-white/10">
                                                 <div className="flex items-center justify-between mb-1">
-                                                    <span className="px-1.5 py-0.5 bg-yellow-500/10 text-yellow-600 text-[8px] font-black uppercase tracking-widest rounded">Competition</span>
-                                                    <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{formatDate(eventItems[0].date)}</p>
+                                                    <span className="px-1.5 py-0.5 bg-accent/10 text-accent text-[8px] font-black uppercase tracking-widest rounded">Competition</span>
+                                                    <p className="text-[8px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest">{formatDate(eventItems[0].date)}</p>
                                                 </div>
-                                                <h5 className="font-black text-slate-900 text-xs truncate uppercase tracking-tight">{eventName}</h5>
+                                                <h5 className="font-black text-black dark:text-white text-xs truncate uppercase tracking-tight">{eventName}</h5>
                                             </header>
 
                                             <div className="p-4 space-y-3">
                                                 {eventItems.map((item) => (
-                                                    <div key={item.id} className="group/item relative bg-white rounded-lg p-3 border border-slate-100 hover:border-yellow-200 hover:shadow-sm transition-all duration-200">
+                                                    <div key={item.id} className="group/item relative bg-white dark:bg-[#0A0A0A] rounded-lg p-3 border border-neutral-100 dark:border-white/10 hover:border-accent/30 hover:shadow-sm transition-all duration-200">
                                                         <div className="flex justify-between items-start">
                                                             <div className="flex items-center space-x-3">
                                                                 <div className={`h-8 w-8 rounded-md flex items-center justify-center shadow-sm transform group-hover/item:rotate-12 transition-transform ${item.medal === 'Gold' ? 'bg-gradient-to-br from-yellow-300 via-yellow-400 to-yellow-600 text-white' :
-                                                                    item.medal === 'Silver' ? 'bg-gradient-to-br from-slate-200 via-slate-300 to-slate-400 text-slate-700' :
+                                                                    item.medal === 'Silver' ? 'bg-gradient-to-br from-neutral-200 via-neutral-300 to-neutral-400 text-neutral-700 dark:text-neutral-300' :
                                                                         item.medal === 'Bronze' ? 'bg-gradient-to-br from-orange-300 via-orange-400 to-orange-600 text-white' :
-                                                                            'bg-slate-100 text-slate-400'
+                                                                            'bg-neutral-100 dark:bg-white/5 text-neutral-400 dark:text-neutral-500'
                                                                     }`}>
                                                                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                                                                         <path d="M10 2l.645 2.133a1 1 0 00.95.69h2.243l-1.814 1.318a1 1 0 00-.363 1.118l.645 2.133L10 8.077 7.339 9.392l.645-2.133a1 1 0 00-.363-1.118L5.807 4.823h2.243a1 1 0 00.95-.69L10 2z" />
@@ -282,23 +288,23 @@ export const Achievements: React.FC = () => {
                                                                 </div>
                                                                 <div>
                                                                     <p className={`text-[10px] font-black leading-tight ${item.medal === 'Gold' ? 'text-yellow-700' :
-                                                                        item.medal === 'Silver' ? 'text-slate-600' :
+                                                                        item.medal === 'Silver' ? 'text-neutral-600 dark:text-neutral-300' :
                                                                             item.medal === 'Bronze' ? 'text-orange-700' :
-                                                                                'text-slate-500'
+                                                                                'text-neutral-500 dark:text-neutral-400'
                                                                         }`}>{item.medal}</p>
-                                                                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.1em]">{item.category}</p>
+                                                                    <p className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-[0.1em]">{item.category}</p>
                                                                 </div>
                                                             </div>
                                                             <button
                                                                 onClick={() => { setCurrentAchievement(item); setIsFormOpen(true); }}
-                                                                className="p-1 rounded-md text-slate-300 hover:text-yellow-600 hover:bg-slate-50 transition-all opacity-0 group-hover/item:opacity-100"
+                                                                className="p-1 rounded-md text-neutral-300 hover:text-accent hover:bg-neutral-50 dark:hover:bg-white/5 transition-all opacity-0 group-hover/item:opacity-100"
                                                             >
                                                                 <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                                                             </button>
                                                         </div>
                                                         <div className="mt-2 flex items-center justify-between text-[8px] font-bold">
-                                                            <span className="text-slate-300 uppercase tracking-widest">Division</span>
-                                                            <span className="text-slate-500 uppercase">{item.division || 'Open'}</span>
+                                                            <span className="text-neutral-300 uppercase tracking-widest">Division</span>
+                                                            <span className="text-neutral-500 dark:text-neutral-400 uppercase">{item.division || 'Open'}</span>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -318,33 +324,33 @@ export const Achievements: React.FC = () => {
                     <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center lg:p-6 pb-0 px-0 pt-12">
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
                             onClick={() => setIsFormOpen(false)}
                         />
                         <motion.div
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
+                            className="relative bg-white dark:bg-[#0A0A0A] rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] lg:max-h-[90vh] mt-auto lg:mt-0"
                         >
-                            <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50 backdrop-blur-xl sticky top-0 z-20">
+                            <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-neutral-100 dark:border-white/10 bg-neutral-50/50 dark:bg-black/50 backdrop-blur-xl sticky top-0 z-20">
                                 <div>
-                                    <p className="text-[9px] uppercase font-black text-yellow-600 tracking-[.2em] mb-1 leading-none">Honor Roll</p>
-                                    <h3 className="text-xl font-black font-display text-slate-900 tracking-tight leading-none">
+                                    <p className="text-[9px] uppercase font-black text-accent tracking-[.2em] mb-1 leading-none">Honor Roll</p>
+                                    <h3 className="text-xl font-black font-display text-black dark:text-white tracking-tight leading-none">
                                         {currentAchievement.id ? 'Refine Honor' : 'Bestow Honor'}
                                     </h3>
                                 </div>
-                                <button onClick={() => setIsFormOpen(false)} className="h-9 w-9 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all duration-300">
+                                <button onClick={() => setIsFormOpen(false)} className="h-9 w-9 rounded-full bg-white dark:bg-[#0A0A0A] border border-neutral-100 dark:border-white/10 text-neutral-300 flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300">
                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </header>
 
                             <form id="achievement-form" onSubmit={handleSaveClick} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-5">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Recipient</label>
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Recipient</label>
                                     <select
                                         required
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                        className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none text-sm"
                                         value={currentAchievement.studentId || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, studentId: e.target.value })}
                                         disabled={!!currentAchievement.id}
@@ -355,10 +361,10 @@ export const Achievements: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Event Selector</label>
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Event Selector</label>
                                     <div className="relative">
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none text-sm"
                                             onChange={handleEventSelect}
                                             value={globalEvents.some(e => e.title === currentAchievement.eventName) ? globalEvents.find(e => e.title === currentAchievement.eventName)?.id : ''}
                                         >
@@ -369,7 +375,7 @@ export const Achievements: React.FC = () => {
                                     </div>
                                     <input
                                         type="text"
-                                        className="w-full px-5 py-3 bg-white border border-slate-200 rounded-md mt-2 text-sm font-bold text-slate-700"
+                                        className="w-full px-5 py-3 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-md mt-2 text-sm font-bold text-neutral-700 dark:text-neutral-300"
                                         placeholder="Or type custom event name..."
                                         value={currentAchievement.eventName || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, eventName: e.target.value })}
@@ -378,9 +384,9 @@ export const Achievements: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Category</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Category</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none text-sm"
                                             value={currentAchievement.category || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, category: e.target.value })}
                                         >
@@ -394,9 +400,9 @@ export const Achievements: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Division</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Division</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none text-sm"
                                             value={currentAchievement.division || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, division: e.target.value })}
                                         >
@@ -413,9 +419,9 @@ export const Achievements: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Rank / Medal</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Rank / Medal</label>
                                         <select
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md focus:bg-white focus:ring-4 focus:ring-yellow-500/5 focus:border-yellow-500 outline-none transition-all font-bold text-slate-900 appearance-none text-sm"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none text-sm"
                                             value={currentAchievement.medal || 'Participate'}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, medal: e.target.value })}
                                         >
@@ -426,10 +432,10 @@ export const Achievements: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Date</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Date</label>
                                         <input
                                             type="date" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md outline-none font-bold text-neutral-700 dark:text-neutral-300 text-sm"
                                             value={currentAchievement.date || ''}
                                             onChange={e => setCurrentAchievement({ ...currentAchievement, date: e.target.value })}
                                         />
@@ -437,9 +443,9 @@ export const Achievements: React.FC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Notes / Description</label>
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Notes / Description</label>
                                     <textarea
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-md outline-none font-bold text-slate-700 text-sm h-20 resize-none"
+                                        className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-md outline-none font-bold text-neutral-700 dark:text-neutral-300 text-sm h-20 resize-none"
                                         placeholder="Additional details..."
                                         value={currentAchievement.notes || ''}
                                         onChange={e => setCurrentAchievement({ ...currentAchievement, notes: e.target.value, description: e.target.value })}
@@ -447,12 +453,12 @@ export const Achievements: React.FC = () => {
                                 </div>
 
                             </form>
-                            <div className="px-6 py-5 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center space-x-3">
+                            <div className="px-6 py-5 border-t border-neutral-100 dark:border-white/10 bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-xl sticky bottom-0 z-20 flex items-center space-x-3">
                                 <button
                                     form="achievement-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                    className="flex-1 bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-black disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing...' : (currentAchievement.id ? 'Save Changes' : 'Confer Honor')}
                                 </button>

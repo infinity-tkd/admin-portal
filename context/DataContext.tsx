@@ -43,9 +43,9 @@ const DataProviderContent: React.FC<{ children: ReactNode }> = ({ children }) =>
     // --- QUERY CONFIGURATION ---
     const QUERY_OPTIONS = {
         enabled: isEnabled,
-        refetchInterval: 6000, // 6 seconds
+        refetchInterval: 30000, // 6 seconds
         refetchIntervalInBackground: true,
-        staleTime: 6000, // Data is fresh for 6s
+        staleTime: 30000, // Data is fresh for 6s
         refetchOnWindowFocus: true,
     };
 

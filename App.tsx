@@ -1,4 +1,5 @@
 import React from 'react';
+import { ThemeProvider } from './context/ThemeContext';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { DataProvider, useData } from './context/DataContext';
@@ -34,24 +35,24 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, roles }) => {
     // BLOCKING DATA LOADER
     if (dataLoading) {
         return (
-            <div className="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-[9999]">
+            <div className="fixed inset-0 bg-white dark:bg-black flex flex-col items-center justify-center z-[9999] transition-colors duration-300">
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="flex flex-col items-center space-y-8"
                 >
                     <div className="relative">
-                        <div className="h-24 w-24 rounded-2xl bg-white border border-slate-100 shadow-xl flex items-center justify-center relative overflow-hidden">
+                        <div className="h-24 w-24 rounded-2xl bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 shadow-xl flex items-center justify-center relative overflow-hidden">
                             <motion.div
                                 animate={{ rotate: 360 }}
                                 transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
                                 className="absolute inset-0 bg-gradient-to-tr from-transparent via-transparent to-primary/10"
                             />
-                            <div className="h-12 w-12 bg-primary rounded flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-primary/20">
-                                ∞
+                            <div className="h-12 w-12 flex items-center justify-center">
+                                <img src="/logo.svg" alt="Infinity Logo" className="w-full h-full object-contain drop-shadow-lg" />
                             </div>
                         </div>
-                        <div className="absolute -bottom-3 -right-3 h-8 w-8 bg-white rounded-lg border border-slate-100 flex items-center justify-center shadow-lg">
+                        <div className="absolute -bottom-3 -right-3 h-8 w-8 bg-white dark:bg-[#0A0A0A] rounded-lg border border-neutral-200 dark:border-white/10 flex items-center justify-center shadow-lg">
                             <motion.div
                                 animate={{ scale: [1, 1.2, 1] }}
                                 transition={{ duration: 1.5, repeat: Infinity }}
@@ -60,10 +61,10 @@ const PrivateRoute: React.FC<PrivateRouteProps> = ({ children, roles }) => {
                         </div>
                     </div>
                     <div className="text-center space-y-2">
-                        <h3 className="text-xl font-black font-display text-slate-900 tracking-tight">System Synchronizing</h3>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Fetching secure records...</p>
+                        <h3 className="text-xl font-black font-display text-black dark:text-white tracking-tight">System Synchronizing</h3>
+                        <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Fetching secure records...</p>
                     </div>
-                    <div className="w-48 h-1 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="w-48 h-1 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden">
                         <motion.div
                             initial={{ x: '-100%' }}
                             animate={{ x: '100%' }}
@@ -133,15 +134,17 @@ import { ToastProvider } from './context/ToastContext';
 
 const App: React.FC = () => {
     return (
-        <AuthProvider>
-            <DataProvider>
-                <ToastProvider>
-                    <Router>
-                        <AppRoutes />
-                    </Router>
-                </ToastProvider>
-            </DataProvider>
-        </AuthProvider>
+        <ThemeProvider>
+            <AuthProvider>
+                <DataProvider>
+                    <ToastProvider>
+                        <Router>
+                            <AppRoutes />
+                        </Router>
+                    </ToastProvider>
+                </DataProvider>
+            </AuthProvider>
+        </ThemeProvider>
     );
 };
 

@@ -405,3 +405,16 @@ function getBeltPhilosophyData(beltLevel) {
   }
   return { found: false };
 }
+
+
+i am doing a multiple poster for facebook post for promoting Infinity TKD
+help me check the poster title/heading, total 7 posters
+"""
+What makes Infinity TKD Different
+1. Science-Based Training Methodology
+2. Professional and Real Example
+3. Exclusive Coaching Program
+4. Safe Environment & Structured Curriculum
+5. Pathways for Both Athletes & Wellness Enthusiasts
+Start Your Journey to Excellence Today
+"""

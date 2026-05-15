@@ -168,12 +168,16 @@ export const Payments: React.FC = () => {
             const { studentName, ...apiPayload } = saved;
 
             // Optimistic Update: Update cache immediately
-            queryClient.setQueryData(['payments'], (old: Payment[] | undefined) => {
-                const list = old || [];
-                if (currentPayment.id) { // If editing an existing payment
-                    return list.map(p => p.id === currentPayment.id ? saved : p);
+            queryClient.setQueryData(['masterData'], (old: any) => {
+                const list = old?.payments || [];
+                const isNew = !currentPayment.id;
+                let newList = [];
+                if (!isNew) {
+                    newList = list.map((item: any) => item.id === apiPayload.id ? apiPayload : item);
+                } else {
+                    newList = [...list, { ...apiPayload, id: 'temp-' + Date.now() }];
                 }
-                return [...list, saved]; // If adding a new payment
+                return { ...old, payments: newList };
             });
 
             // ACTUAL API CALL
@@ -194,7 +198,7 @@ export const Payments: React.FC = () => {
         const isPending = status === 'Pending';
         return (
             <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border transition-all ${isPaid ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
-                isPending ? 'bg-slate-100 text-slate-500 border-slate-200' : 'bg-red-50 text-red-600 border-red-100'
+                isPending ? 'bg-neutral-100 dark:bg-white/5 text-neutral-500 dark:text-neutral-400 border-neutral-200 dark:border-white/10' : 'bg-red-50 text-red-600 border-red-100'
                 }`}>
                 {status}
             </span>
@@ -207,7 +211,7 @@ export const Payments: React.FC = () => {
     if (loading) return (
         <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
             <div className="h-12 w-12 border-[5px] border-accent/20 border-t-accent rounded-full animate-spin" />
-            <p className="font-display font-black text-slate-400 uppercase tracking-widest text-[10px]">Processing Treasury</p>
+            <p className="font-display font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest text-[10px]">Processing Treasury</p>
         </div>
     );
 
@@ -226,17 +230,17 @@ export const Payments: React.FC = () => {
                             Economy Report {monthFilter !== 'All' ? `• ${monthFilter}` : ''} {yearFilter !== 'All' ? `• FY ${yearFilter}` : ''}
                         </p>
                         <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black font-display tracking-tight leading-none">
-                            <span className="text-slate-500 font-sans tracking-normal">$</span>{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            <span className="text-neutral-500 dark:text-neutral-400 font-sans tracking-normal">$</span>{totalIncome.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </h2>
                     </div>
                     <div className="relative z-10 flex items-center space-x-6 mt-6">
                         <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Receipts</p>
-                            <p className="text-base font-black text-white">{filteredPayments.length} <span className="text-[9px] text-slate-500">TXNS</span></p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-1">Receipts</p>
+                            <p className="text-base font-black text-white">{filteredPayments.length} <span className="text-[9px] text-neutral-500 dark:text-neutral-400">TXNS</span></p>
                         </div>
-                        <div className="h-8 w-[1px] bg-white/10" />
+                        <div className="h-8 w-[1px] bg-white/10 dark:bg-[#0A0A0A]/10" />
                         <div>
-                            <p className="text-[9px] font-black uppercase tracking-widest text-slate-500 mb-1">Uncollected</p>
+                            <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 dark:text-neutral-400 mb-1">Uncollected</p>
                             <p className="text-base font-black text-rose-500">${pendingIncome.toLocaleString()}</p>
                         </div>
                     </div>
@@ -245,13 +249,13 @@ export const Payments: React.FC = () => {
                 <motion.div
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
-                    className="bg-white border border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col justify-between shadow-sm"
+                    className="bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-xl p-6 sm:p-8 flex flex-col justify-between shadow-sm"
                 >
                     <div className="space-y-3">
                         <div className="h-11 w-11 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-xl font-black shadow-inner">
                             $
                         </div>
-                        <h3 className="text-xl font-black font-display text-slate-900 leading-tight">Income Entry</h3>
+                        <h3 className="text-xl font-black font-display text-black dark:text-white leading-tight">Income Entry</h3>
                     </div>
                     <button
                         onClick={() => {
@@ -263,7 +267,7 @@ export const Payments: React.FC = () => {
                             });
                             setIsModalOpen(true);
                         }}
-                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 active:scale-95 transition-all mt-3 sm:mt-5"
+                        className="w-full bg-primary text-white py-3.5 sm:py-4 rounded-lg font-black text-[10px] sm:text-xs uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-black active:scale-95 transition-all mt-3 sm:mt-5"
                     >
                         Create Transaction
                     </button>
@@ -276,19 +280,19 @@ export const Payments: React.FC = () => {
                     <input
                         type="text"
                         placeholder="Student name or ID..."
-                        className="w-full pl-11 pr-5 py-3 bg-white border border-slate-200 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 placeholder:text-slate-300 text-sm"
+                        className="w-full pl-11 pr-5 py-3 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white placeholder:text-neutral-300 text-sm"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300 transition-colors group-focus-within:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                    <svg className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-300 transition-colors group-focus-within:text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 </div>
 
-                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
+                <div className="flex bg-neutral-100/50 dark:bg-white/5 p-1.5 rounded-lg border border-neutral-200 dark:border-white/10">
                     {years.map(y => (
                         <button
                             key={y}
                             onClick={() => setYearFilter(y)}
-                            className={`flex-1 px-2 py-2 rounded text-[9px] font-black uppercase tracking-widest transition-all ${yearFilter === y ? 'bg-white shadow-sm text-slate-900 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex-1 px-2 py-2 rounded text-[9px] font-black uppercase tracking-widest transition-all ${yearFilter === y ? 'bg-white dark:bg-[#0A0A0A] shadow-sm text-black dark:text-white ring-1 ring-neutral-200' : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:text-neutral-300'}`}
                         >
                             {y}
                         </button>
@@ -296,7 +300,7 @@ export const Payments: React.FC = () => {
                 </div>
 
                 <select
-                    className="px-4 py-2 bg-white border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-xs appearance-none cursor-pointer"
+                    className="px-4 py-2 bg-white dark:bg-[#0A0A0A] border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-bold text-neutral-700 dark:text-neutral-300 text-xs appearance-none cursor-pointer"
                     value={monthFilter}
                     onChange={(e) => setMonthFilter(e.target.value)}
                 >
@@ -304,12 +308,12 @@ export const Payments: React.FC = () => {
                     {MONTHS.map(m => <option key={m} value={m}>{m}</option>)}
                 </select>
 
-                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
+                <div className="flex bg-neutral-100/50 dark:bg-white/5 p-1.5 rounded-lg border border-neutral-200 dark:border-white/10">
                     {['All', 'Paid', 'Unpaid', 'Pending'].map(s => (
                         <button
                             key={s}
                             onClick={() => setStatusFilter(s)}
-                            className={`flex-1 px-2 py-2 rounded text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-white shadow-sm text-slate-900 ring-1 ring-slate-200' : 'text-slate-400 hover:text-slate-600'}`}
+                            className={`flex-1 px-2 py-2 rounded text-[9px] font-black uppercase tracking-widest transition-all ${statusFilter === s ? 'bg-white dark:bg-[#0A0A0A] shadow-sm text-black dark:text-white ring-1 ring-neutral-200' : 'text-neutral-400 dark:text-neutral-500 hover:text-neutral-600 dark:text-neutral-300'}`}
                         >
                             {s}
                         </button>
@@ -318,20 +322,20 @@ export const Payments: React.FC = () => {
             </div>
 
             {/* TRANSACTION LIST */}
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-white dark:bg-[#0A0A0A] rounded-xl border border-neutral-200 dark:border-white/10 shadow-sm overflow-hidden flex flex-col">
                 <div className="min-w-[800px] lg:min-w-0">
                     <table className="w-full text-left border-collapse">
                         <thead>
-                            <tr className="bg-slate-50 border-b border-slate-100 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">MONTH / YEAR</th>
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Student</th>
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Amount</th>
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Date</th>
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Status</th>
-                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 text-right">Ops</th>
+                            <tr className="bg-neutral-50 dark:bg-black/50 border-b border-neutral-100 dark:border-white/10 sticky top-0 z-10 shadow-sm backdrop-blur-sm">
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">MONTH / YEAR</th>
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Student</th>
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Amount</th>
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Date</th>
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500">Status</th>
+                                <th className="px-5 sm:px-6 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-neutral-400 dark:text-neutral-500 text-right">Ops</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-50">
+                        <tbody className="divide-y divide-neutral-50">
                             {filteredPayments.map((p, i) => {
                                 // DATA NORMALIZATION BRIDGE
                                 // Handle backend mismatch (type vs forMonth)
@@ -349,7 +353,7 @@ export const Payments: React.FC = () => {
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={{ delay: i * 0.03 }}
                                         key={p.id}
-                                        className="group hover:bg-slate-50/50 transition-all duration-300 cursor-pointer"
+                                        className="group hover:bg-neutral-50/50 dark:bg-black/50 transition-all duration-300 cursor-pointer"
                                         onClick={() => {
                                             if (p.status === 'Pending') {
                                                 // Pre-fill for new payment
@@ -370,10 +374,10 @@ export const Payments: React.FC = () => {
                                     >
                                         <td className="px-5 sm:px-6 py-4">
                                             <div className="flex flex-col">
-                                                <p className="text-sm font-black text-slate-900 leading-none uppercase tracking-tight">
+                                                <p className="text-sm font-black text-black dark:text-white leading-none uppercase tracking-tight">
                                                     {displayMonth}
                                                 </p>
-                                                <p className="text-[10px] font-bold text-slate-400 mt-1.5 uppercase tracking-widest">
+                                                <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 mt-1.5 uppercase tracking-widest">
                                                     FY {p.year}
                                                 </p>
                                             </div>
@@ -382,20 +386,20 @@ export const Payments: React.FC = () => {
                                             <div className="flex items-center space-x-3">
                                                 <Avatar profilePictureId={student?.profilePictureId} name={displayName} size="sm" className="hidden sm:flex" />
                                                 <div>
-                                                    <p className="text-sm font-black text-slate-900 group-hover:text-accent transition-colors">
+                                                    <p className="text-sm font-black text-black dark:text-white group-hover:text-accent transition-colors">
                                                         {displayName}
                                                     </p>
-                                                    <p className="text-[10px] font-bold text-slate-400 mt-0.5">{p.studentId}</p>
+                                                    <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 mt-0.5">{p.studentId}</p>
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="px-5 sm:px-6 py-4">
-                                            <p className="text-base font-black text-slate-900 font-mono tracking-tight leading-none">
+                                            <p className="text-base font-black text-black dark:text-white font-mono tracking-tight leading-none">
                                                 $ {p.amount.toFixed(2)}
                                             </p>
                                         </td>
                                         <td className="px-5 sm:px-6 py-4">
-                                            <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
+                                            <p className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-widest leading-none">
                                                 {p.date}
                                             </p>
                                         </td>
@@ -403,7 +407,7 @@ export const Payments: React.FC = () => {
                                             <StatusBadge status={p.status} />
                                         </td>
                                         <td className="px-5 sm:px-6 py-4 text-right">
-                                            <button className="text-slate-300 hover:text-accent transition-colors">
+                                            <button className="text-neutral-300 hover:text-accent transition-colors">
                                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                                 </svg>
@@ -423,33 +427,33 @@ export const Payments: React.FC = () => {
                     <div className="fixed inset-0 z-[100] flex items-end lg:items-center justify-center lg:p-6 pb-0 px-0 pt-12">
                         <motion.div
                             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-slate-950/60 backdrop-blur-xl"
+                            className="absolute inset-0 bg-black/60 backdrop-blur-xl"
                             onClick={() => setIsModalOpen(false)}
                         />
                         <motion.div
                             initial={{ scale: 0.98, opacity: 0, y: 20 }}
                             animate={{ scale: 1, opacity: 1, y: 0 }}
                             exit={{ scale: 0.98, opacity: 0, y: 20 }}
-                            className="relative bg-white rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col mt-auto lg:my-8 max-h-[85vh] lg:max-h-[90vh]"
+                            className="relative bg-white dark:bg-[#0A0A0A] rounded-t-2xl lg:rounded-xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col mt-auto lg:my-8 max-h-[85vh] lg:max-h-[90vh]"
                         >
-                            <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-slate-100 bg-slate-50/50">
+                            <header className="px-6 py-5 lg:px-8 lg:py-6 flex items-center justify-between border-b border-neutral-100 dark:border-white/10 bg-neutral-50/50 dark:bg-black/50">
                                 <div>
                                     <p className="text-[9px] uppercase font-black text-accent tracking-[.2em] mb-1 leading-none">Ledger Entry</p>
-                                    <h3 className="text-xl font-black font-display text-slate-900 tracking-tight leading-none">
+                                    <h3 className="text-xl font-black font-display text-black dark:text-white tracking-tight leading-none">
                                         {currentPayment.id ? 'Modify Record' : 'Log Income'}
                                     </h3>
                                 </div>
-                                <button onClick={() => setIsModalOpen(false)} className="h-9 w-9 rounded-full bg-white border border-slate-100 text-slate-300 flex items-center justify-center hover:bg-slate-900 hover:text-white transition-all duration-300">
+                                <button onClick={() => setIsModalOpen(false)} className="h-9 w-9 rounded-full bg-white dark:bg-[#0A0A0A] border border-neutral-100 dark:border-white/10 text-neutral-300 flex items-center justify-center hover:bg-black hover:text-white transition-all duration-300">
                                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M6 18L18 6M6 6l12 12" /></svg>
                                 </button>
                             </header>
 
                             <form id="payment-form" onSubmit={handleSave} className="flex-1 overflow-y-auto p-5 lg:p-8 pb-24 lg:pb-8 space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Warrior Entity</label>
+                                    <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Warrior Entity</label>
                                     <select
                                         required
-                                        className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-slate-900 appearance-none"
+                                        className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-lg focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-bold text-black dark:text-white appearance-none"
                                         value={currentPayment.studentId || ''}
                                         onChange={e => {
                                             const s = globalStudents.find(st => st.id === e.target.value);
@@ -464,10 +468,10 @@ export const Payments: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-5">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">For Month</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">For Month</label>
                                         <select
                                             required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-900 appearance-none text-base"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-bold text-black dark:text-white appearance-none text-base"
                                             value={currentPayment.forMonth || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, forMonth: e.target.value })}
                                         >
@@ -476,10 +480,10 @@ export const Payments: React.FC = () => {
                                         </select>
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Year</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Year</label>
                                         <input
                                             type="number" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg outline-none font-black text-slate-900 text-base"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-black text-black dark:text-white text-base"
                                             value={currentPayment.year || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, year: e.target.value })}
                                         />
@@ -488,32 +492,32 @@ export const Payments: React.FC = () => {
 
                                 <div className="grid grid-cols-2 gap-5">
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Amount ($)</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Amount ($)</label>
                                         <input
                                             type="number" step="0.01" min="0" required
-                                            className="w-full px-5 py-3.5 bg-slate-50 border border-slate-200 rounded-lg focus:bg-white focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-slate-900 text-lg text-center"
+                                            className="w-full px-5 py-3.5 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-lg focus:bg-white dark:bg-[#0A0A0A] focus:ring-4 focus:ring-accent/5 focus:border-accent outline-none transition-all font-black text-black dark:text-white text-lg text-center"
                                             value={currentPayment.amount || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, amount: Math.max(0, parseFloat(e.target.value)) })}
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <label className="text-[9px] font-black uppercase tracking-widest text-slate-400 ml-3">Payment Date</label>
+                                        <label className="text-[9px] font-black uppercase tracking-widest text-neutral-400 dark:text-neutral-500 ml-3">Payment Date</label>
                                         <input
                                             type="date" required
-                                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-lg outline-none font-bold text-slate-700 text-sm"
+                                            className="w-full px-4 py-3 bg-neutral-50 dark:bg-black/50 border border-neutral-200 dark:border-white/10 rounded-lg outline-none font-bold text-neutral-700 dark:text-neutral-300 text-sm"
                                             value={currentPayment.date || ''}
                                             onChange={e => setCurrentPayment({ ...currentPayment, date: e.target.value })}
                                         />
                                     </div>
                                 </div>
 
-                                <div className="flex bg-slate-100/50 p-1.5 rounded-lg border border-slate-200">
+                                <div className="flex bg-neutral-100/50 dark:bg-white/5 p-1.5 rounded-lg border border-neutral-200 dark:border-white/10">
                                     {['Paid', 'Unpaid'].map(s => (
                                         <button
                                             key={s}
                                             type="button"
                                             onClick={() => setCurrentPayment({ ...currentPayment, status: s as any })}
-                                            className={`flex-1 py-3.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${currentPayment.status === s ? (s === 'Paid' ? 'bg-white shadow text-emerald-600 ring-1 ring-slate-200' : 'bg-white shadow text-rose-600 ring-1 ring-slate-200') : 'text-slate-400'}`}
+                                            className={`flex-1 py-3.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${currentPayment.status === s ? (s === 'Paid' ? 'bg-white dark:bg-[#0A0A0A] shadow text-emerald-600 ring-1 ring-neutral-200' : 'bg-white dark:bg-[#0A0A0A] shadow text-rose-600 ring-1 ring-neutral-200') : 'text-neutral-400 dark:text-neutral-500'}`}
                                         >
                                             {s}
                                         </button>
@@ -521,12 +525,12 @@ export const Payments: React.FC = () => {
                                 </div>
 
                             </form>
-                            <div className="px-6 py-5 border-t border-slate-100 bg-white/90 backdrop-blur-xl sticky bottom-0 z-20">
+                            <div className="px-6 py-5 border-t border-neutral-100 dark:border-white/10 bg-white/90 dark:bg-[#0A0A0A]/90 backdrop-blur-xl sticky bottom-0 z-20">
                                 <button
                                     form="payment-form"
                                     type="submit"
                                     disabled={saving}
-                                    className="w-full bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 disabled:opacity-50 active:scale-95 transition-all outline-none"
+                                    className="w-full bg-primary text-white py-4 rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-black disabled:opacity-50 active:scale-95 transition-all outline-none"
                                 >
                                     {saving ? 'Processing Txn...' : 'Lock Transaction'}
                                 </button>

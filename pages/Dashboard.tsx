@@ -17,7 +17,7 @@ export const Dashboard: React.FC = () => {
           <div className="h-16 w-16 border-4 border-accent/20 border-t-accent rounded-full animate-spin" />
           <div className="absolute inset-0 flex items-center justify-center font-black text-accent text-xs">∞</div>
         </div>
-        <p className="font-display font-black text-slate-400 uppercase tracking-widest text-[10px]">Syncing Dojo Data</p>
+        <p className="font-display font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest text-[10px]">Syncing Dojo Data</p>
       </div>
     );
   }
@@ -34,16 +34,16 @@ export const Dashboard: React.FC = () => {
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative p-5 rounded-xl bg-white border border-slate-100 shadow-sm overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-500"
+      className="group relative p-5 rounded-xl bg-white dark:bg-[#0A0A0A] border border-neutral-100 dark:border-white/10 shadow-sm overflow-hidden hover:shadow-xl hover:shadow-primary/5 transition-all duration-500"
     >
       <div className="relative z-10 flex items-center space-x-4">
-        <div className={`h-12 w-12 rounded-lg bg-slate-50 flex items-center justify-center ${color} transition-all duration-500 shadow-inner`}>
+        <div className={`h-12 w-12 rounded-lg bg-neutral-50 dark:bg-black/50 flex items-center justify-center ${color} transition-all duration-500 shadow-inner`}>
           {React.cloneElement(icon as React.ReactElement, { className: 'h-5 w-5' })}
         </div>
         <div>
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{title}</p>
+          <p className="text-[10px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-0.5">{title}</p>
           <div className="flex items-center space-x-2">
-            <h3 className="text-lg sm:text-xl font-black font-display text-slate-900 tracking-tight leading-none">{value}</h3>
+            <h3 className="text-lg sm:text-xl font-black font-display text-black dark:text-white tracking-tight leading-none">{value}</h3>
           </div>
         </div>
       </div>
@@ -93,17 +93,17 @@ export const Dashboard: React.FC = () => {
               initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
               transition={{ delay: 0.5, duration: 0.6 }}
-              className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-full"
+              className="bg-white dark:bg-[#0A0A0A] p-6 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm h-full"
             >
               <div className="flex items-center justify-between mb-8">
-                <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Command Center</h3>
+                <h3 className="text-lg font-black font-display text-black dark:text-white tracking-tight leading-none uppercase">Command Center</h3>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 {[
-                  { label: 'Register', sub: 'Add Student', icon: '👤+', to: '/students', color: 'hover:bg-slate-50 text-primary border-slate-100' },
-                  { label: 'Check-in', sub: 'Attendance', icon: '📅', to: '/attendance', color: 'hover:bg-slate-50 text-primary border-slate-100' },
-                  { label: 'Economy', sub: 'Payments', icon: '💰', to: '/payments', color: 'hover:bg-slate-50 text-primary border-slate-100' },
-                  { label: 'Schedules', sub: 'Events', icon: '🎪', to: '/events', color: 'hover:bg-slate-50 text-primary border-slate-100' },
+                  { label: 'Register', sub: 'Add Student', icon: '👤+', to: '/students', color: 'hover:bg-neutral-50 dark:hover:bg-white/5 text-primary border-neutral-100 dark:border-white/10' },
+                  { label: 'Check-in', sub: 'Attendance', icon: '📅', to: '/attendance', color: 'hover:bg-neutral-50 dark:hover:bg-white/5 text-primary border-neutral-100 dark:border-white/10' },
+                  { label: 'Economy', sub: 'Payments', icon: '💰', to: '/payments', color: 'hover:bg-neutral-50 dark:hover:bg-white/5 text-primary border-neutral-100 dark:border-white/10' },
+                  { label: 'Schedules', sub: 'Events', icon: '🎪', to: '/events', color: 'hover:bg-neutral-50 dark:hover:bg-white/5 text-primary border-neutral-100 dark:border-white/10' },
                 ].map((action, i) => (
                   <motion.button
                     whileHover={{ y: -1 }}
@@ -131,7 +131,7 @@ export const Dashboard: React.FC = () => {
               <div className="relative z-10 flex items-center justify-between mb-8">
                 <div>
                   <h3 className="text-lg font-black font-display tracking-tight leading-none uppercase">Celebrations</h3>
-                  <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
+                  <p className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-1">
                     {new Date().toLocaleString('default', { month: 'long' })} Birthdays
                   </p>
                 </div>
@@ -157,7 +157,7 @@ export const Dashboard: React.FC = () => {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 0.7 + i * 0.1 }}
                       key={s.id}
-                      className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-white/10 border border-white/5 hover:bg-white/20 transition-all cursor-pointer group active:scale-95"
+                      className="flex items-center justify-between p-3 sm:p-4 rounded-xl bg-white/10 dark:bg-[#0A0A0A]/10 border border-white/5 hover:bg-white/20 dark:bg-[#0A0A0A]/20 transition-all cursor-pointer group active:scale-95"
                       onClick={() => navigate('/students')}
                     >
                       <div className="flex items-center space-x-3">
@@ -166,18 +166,18 @@ export const Dashboard: React.FC = () => {
                         </div>
                         <div>
                           <span className="block font-black text-[11px] uppercase tracking-widest leading-none">{s.englishName}</span>
-                          <span className="block text-[9px] text-slate-400 font-bold mt-0.5 font-display">{s.khmerName}</span>
+                          <span className="block text-[9px] text-neutral-400 dark:text-neutral-500 font-bold mt-0.5 font-display">{s.khmerName}</span>
                         </div>
                       </div>
                       <div className="text-right">
                         <span className="block text-[10px] font-black text-accent leading-none">{formatDate(s.dob)?.split('-').slice(0, 2).join(' / ')}</span>
-                        <span className="block text-[7px] text-slate-500 uppercase font-black tracking-widest mt-1">Run: {new Date(s.dob).getDate()}</span>
+                        <span className="block text-[7px] text-neutral-500 dark:text-neutral-400 uppercase font-black tracking-widest mt-1">Run: {new Date(s.dob).getDate()}</span>
                       </div>
                     </motion.div>
                   ))}
 
                 {students.filter(s => s.dob && new Date(s.dob).getMonth() === new Date().getMonth()).length === 0 && (
-                  <div className="p-4 text-center text-slate-500 text-[10px] uppercase font-black tracking-widest">
+                  <div className="p-4 text-center text-neutral-500 dark:text-neutral-400 text-[10px] uppercase font-black tracking-widest">
                     No birthdays this month
                   </div>
                 )}
@@ -190,10 +190,10 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.8 }}
-            className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm"
+            className="bg-white dark:bg-[#0A0A0A] p-6 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm"
           >
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-black font-display text-slate-900 tracking-tight leading-none uppercase">Notifications</h3>
+              <h3 className="text-lg font-black font-display text-black dark:text-white tracking-tight leading-none uppercase">Notifications</h3>
               <button className="text-[9px] font-black text-accent uppercase tracking-widest hover:underline">View All</button>
             </div>
             <div className="space-y-4">
@@ -205,21 +205,21 @@ export const Dashboard: React.FC = () => {
                 .sort((a, b) => b.timestamp - a.timestamp)
                 .slice(0, 5)
                 .map((activity, i) => (
-                  <div key={i} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                  <div key={i} className="flex items-start space-x-4 p-4 rounded-lg hover:bg-neutral-50 dark:hover:bg-white/5 transition-colors border border-transparent hover:border-neutral-100 dark:hover:border-white/20">
                     <div className={`h-10 w-10 rounded-lg flex items-center justify-center text-base shadow-sm ${activity.type === 'Payment' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-blue-50 text-blue-600 border border-blue-100'}`}>
                       {activity.type === 'Payment' ? '💰' : '📅'}
                     </div>
                     <div className="flex-1">
-                      <p className="text-[11px] font-bold text-slate-900">
+                      <p className="text-[11px] font-bold text-black dark:text-white">
                         <span className="font-black">{activity.studentName}</span>
                         {activity.type === 'Payment' ? ` paid $${activity.amount}` : ` checked in`}
                       </p>
-                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">{formatDate(activity.date)} • {activity.type}</p>
+                      <p className="text-[9px] text-neutral-400 dark:text-neutral-500 font-bold uppercase tracking-wider mt-0.5">{formatDate(activity.date)} • {activity.type}</p>
                     </div>
                   </div>
                 ))}
               {(!payments.length && !attendance.length) && (
-                <div className="text-center py-6 text-slate-400 text-xs font-bold uppercase tracking-widest">No recent activity</div>
+                <div className="text-center py-6 text-neutral-400 dark:text-neutral-500 text-xs font-bold uppercase tracking-widest">No recent activity</div>
               )}
             </div>
           </motion.div>
@@ -231,10 +231,10 @@ export const Dashboard: React.FC = () => {
             initial={{ opacity: 0, x: 10 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.7 }}
-            className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm h-full"
+            className="bg-white dark:bg-[#0A0A0A] p-6 rounded-xl border border-neutral-100 dark:border-white/10 shadow-sm h-full"
           >
             <div className="text-center">
-              <div className="h-24 w-24 rounded-full bg-slate-100 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg relative">
+              <div className="h-24 w-24 rounded-full bg-neutral-100 dark:bg-white/5 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg relative">
                 {user?.avatarUrl ? (
                   <img src={user.avatarUrl} alt={user.name} className="h-full w-full object-cover" />
                 ) : (
@@ -242,39 +242,39 @@ export const Dashboard: React.FC = () => {
                 )}
                 <div className="absolute bottom-1 right-3 h-4 w-4 bg-emerald-500 border-2 border-white rounded-full"></div>
               </div>
-              <h3 className="text-lg font-black text-slate-900">{user?.name}</h3>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">{user?.role?.replace('_', ' ')}</p>
+              <h3 className="text-lg font-black text-black dark:text-white">{user?.name}</h3>
+              <p className="text-[10px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-6">{user?.role?.replace('_', ' ')}</p>
 
               <div className="grid grid-cols-2 gap-3 mb-6">
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-[18px] font-black text-slate-900 leading-none">{students.length}</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Students</p>
+                <div className="p-4 bg-neutral-50 dark:bg-black/50 rounded-lg border border-neutral-100 dark:border-white/10">
+                  <p className="text-[18px] font-black text-black dark:text-white leading-none">{students.length}</p>
+                  <p className="text-[8px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-1">Students</p>
                 </div>
-                <div className="p-4 bg-slate-50 rounded-lg border border-slate-100">
-                  <p className="text-[18px] font-black text-slate-900 leading-none">{payments.length}</p>
-                  <p className="text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-1">Payments</p>
+                <div className="p-4 bg-neutral-50 dark:bg-black/50 rounded-lg border border-neutral-100 dark:border-white/10">
+                  <p className="text-[18px] font-black text-black dark:text-white leading-none">{payments.length}</p>
+                  <p className="text-[8px] font-bold text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mt-1">Payments</p>
                 </div>
               </div>
 
-              <button className="w-full py-3 bg-primary text-white rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-slate-900 transition-all active:scale-95">
+              <button className="w-full py-3 bg-primary text-white rounded-lg font-black text-[10px] uppercase tracking-[0.2em] shadow-lg shadow-primary/20 hover:bg-black transition-all active:scale-95">
                 Edit Profile
               </button>
             </div>
 
-            <div className="mt-8 pt-8 border-t border-slate-100">
-              <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-4">System Status</h4>
+            <div className="mt-8 pt-8 border-t border-neutral-100 dark:border-white/10">
+              <h4 className="text-[9px] font-black text-neutral-400 dark:text-neutral-500 uppercase tracking-widest mb-4">System Status</h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-600">Database</span>
+                  <span className="font-bold text-neutral-600 dark:text-neutral-300">Database</span>
                   <span className="flex items-center text-emerald-600 font-bold text-[10px] uppercase tracking-widest"><div className="h-1.5 w-1.5 rounded-full bg-emerald-500 mr-2 animate-pulse" />Live</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-600">Sync</span>
-                  <span className="font-bold text-slate-900 text-[10px]">Just now</span>
+                  <span className="font-bold text-neutral-600 dark:text-neutral-300">Sync</span>
+                  <span className="font-bold text-black dark:text-white text-[10px]">Just now</span>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-bold text-slate-600">Version</span>
-                  <span className="font-bold text-slate-900 text-[10px]">v2.4.0</span>
+                  <span className="font-bold text-neutral-600 dark:text-neutral-300">Version</span>
+                  <span className="font-bold text-black dark:text-white text-[10px]">v2.4.0</span>
                 </div>
               </div>
             </div>
