@@ -131,6 +131,7 @@ const AppRoutes: React.FC = () => {
 }
 
 import { ToastProvider } from './context/ToastContext';
+import { AutoLogout } from './components/AutoLogout';
 
 const App: React.FC = () => {
     return (
@@ -139,6 +140,7 @@ const App: React.FC = () => {
                 <DataProvider>
                     <ToastProvider>
                         <Router>
+                            <AutoLogout />
                             <AppRoutes />
                         </Router>
                     </ToastProvider>

@@ -20,10 +20,30 @@ const API_URL = import.meta.env.VITE_API_URL || '';
 const USE_MOCK = false; // Production Ready: Using Real API
 
 class ApiService {
-  private token: string | null = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
-  private currentUser: User | null = (localStorage.getItem('auth_user') || sessionStorage.getItem('auth_user'))
-    ? JSON.parse((localStorage.getItem('auth_user') || sessionStorage.getItem('auth_user'))!)
-    : null;
+  // Utility for basic storage obfuscation
+  private encodeData(data: string): string {
+    try { return btoa(encodeURIComponent(data)); } catch { return data; }
+  }
+  private decodeData(data: string): string {
+    try { return decodeURIComponent(atob(data)); } catch { return data; }
+  }
+
+  private token: string | null = null;
+  private currentUser: User | null = null;
+
+  constructor() {
+    this.initAuth();
+  }
+
+  private initAuth() {
+    const rawToken = localStorage.getItem('auth_token_enc') || sessionStorage.getItem('auth_token_enc');
+    if (rawToken) this.token = this.decodeData(rawToken);
+
+    const rawUser = localStorage.getItem('auth_user_enc') || sessionStorage.getItem('auth_user_enc');
+    if (rawUser) {
+        try { this.currentUser = JSON.parse(this.decodeData(rawUser)); } catch { this.currentUser = null; }
+    }
+  }
 
   // --- CORE CALLER ---
   private async callApi(action: string, data: any = {}): Promise<any> {
@@ -113,12 +133,12 @@ class ApiService {
           const storage = rememberMe ? localStorage : sessionStorage;
           const other = rememberMe ? sessionStorage : localStorage;
 
-          storage.setItem('auth_token', result.token);
-          storage.setItem('auth_user', JSON.stringify(user));
+          storage.setItem('auth_token_enc', this.encodeData(result.token));
+          storage.setItem('auth_user_enc', this.encodeData(JSON.stringify(user)));
 
           // Clear other storage to prevent conflicting states
-          other.removeItem('auth_token');
-          other.removeItem('auth_user');
+          other.removeItem('auth_token_enc');
+          other.removeItem('auth_user_enc');
 
           return user;
         }
@@ -141,10 +161,10 @@ class ApiService {
   logout() {
     this.token = null;
     this.currentUser = null;
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('auth_user');
-    sessionStorage.removeItem('auth_token');
-    sessionStorage.removeItem('auth_user');
+    localStorage.removeItem('auth_token_enc');
+    localStorage.removeItem('auth_user_enc');
+    sessionStorage.removeItem('auth_token_enc');
+    sessionStorage.removeItem('auth_user_enc');
   }
 
 

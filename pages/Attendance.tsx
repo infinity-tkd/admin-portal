@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { useData } from '../context/DataContext';
 import { Student, Attendance as AttendanceType } from '../types';
 import { api } from '../services/api';
@@ -73,7 +73,10 @@ export const Attendance: React.FC = () => {
         };
     }, [attendanceData, globalStudents.length]);
 
-    // OPTIMIZED: Instant Optimistic Update + Background Save
+    const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const queuedRecordsRef = useRef<Map<string, AttendanceType>>(new Map());
+
+    // OPTIMIZED: Instant Optimistic Update + Debounced Background Save
     const handleStatusChange = async (studentId: string, status: 'Present' | 'Late' | 'Absent') => {
         const currentStatus = attendanceData[studentId];
         if (currentStatus === status) return;
@@ -88,7 +91,6 @@ export const Attendance: React.FC = () => {
         };
 
         // 1. Optimistic Update (Instant Feedback)
-        // We update the cache immediately so the user sees the change with 0 latency.
         queryClient.setQueryData(['masterData'], (old: any) => {
             const list = old?.attendance || [];
             const mergedList = [...list];
@@ -102,18 +104,24 @@ export const Attendance: React.FC = () => {
             return { ...old, attendance: mergedList };
         });
 
-        // 2. Fire-and-Forget API Call (Background)
-        // We do NOT await this to block the UI. We catch errors to revert if needed.
-        api.saveAttendanceBatch([record])
-            .then(() => {
-                // Success - simplified (no toast needed for every click to keep it "quiet")
-                // We rely on the optimistic update.
-            })
-            .catch((error) => {
-                console.error("Save failed:", error);
-                showToast("Failed to save attendance. Please check your connection.", "error");
-                refreshAttendance(); // Revert/Sync on error
-            });
+        // 2. Queue for Batch Processing (Protects Google Apps Script Quota)
+        queuedRecordsRef.current.set(record.id, record);
+
+        if (debounceTimerRef.current) {
+            clearTimeout(debounceTimerRef.current);
+        }
+
+        debounceTimerRef.current = setTimeout(() => {
+            const recordsToSave: AttendanceType[] = Array.from(queuedRecordsRef.current.values());
+            queuedRecordsRef.current.clear(); // Empty the queue
+
+            api.saveAttendanceBatch(recordsToSave)
+                .catch((error) => {
+                    console.error("Batch save failed:", error);
+                    showToast("Failed to sync attendance batch. Please check your connection.", "error");
+                    refreshAttendance(); // Revert/Sync on error
+                });
+        }, 1500); // 1.5 second debounce window
     };
 
     // Manual Sync Button Handler
